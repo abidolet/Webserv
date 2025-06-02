@@ -1,0 +1,7 @@
+obj-*/
+compile_flags.txt
+webserv
+
+
+*.d
+*.c
