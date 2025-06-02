@@ -5,15 +5,16 @@ OBJ_DIR = obj-$(MODE)
 INCLUDES = -Iincludes
 
 CXX = c++
-CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES)
+CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -std=c++98
 
 ifeq ($(MODE), debug)
-	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -g3 
+	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -g3 -std=c++98
 endif
 
 VPATH = srcs
 
 SRCS =	main.cpp	\
+		Webserv.cpp
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 DEPS = $(OBJS:.o=.d)

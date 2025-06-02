@@ -25,4 +25,15 @@ struct Server
 	std::vector<Location>		locations;
 };
 
+class Webserv
+{
+	private:
+		std::vector<Server>	servers;
+	
+	public:
+		Webserv();
+		Webserv(const std::string& file);
+		~Webserv();
+};
+
 #endif

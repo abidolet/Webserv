@@ -1,7 +1,9 @@
-obj-*/
-compile_flags.txt
-webserv
-
-
-*.d
-*.c
+*
+!conf
+!includes
+!srcs
+Makefile
+!*.hpp
+!*.cpp
+!*.tpp
+!*.conf
