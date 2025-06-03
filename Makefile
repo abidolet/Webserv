@@ -1,4 +1,4 @@
-NAME = webserv 
+NAME = webserv
 MODE ?= release
 
 OBJ_DIR = obj-$(MODE)
@@ -45,6 +45,10 @@ $(OBJ_DIR)/%.o: %.cpp Makefile |  $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 	printf "$(GRAY)compiling: $(BLUE)%-40s $(GRAY)[%d/%d]\n" "$<" "$$(ls $(OBJ_DIR) | grep -c '\.o')" "$(words $(SRCS))"
 
+leaks:
+	$(MAKE) MODE=debug all
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./webserv
+
 clean:
 	rm -rf obj-*
 
@@ -53,7 +57,7 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all libft mlx leaks clean fclean re debug release
+.PHONY: all leaks clean fclean re debug
 
 -include $(DEPS)
 .SILENT:
