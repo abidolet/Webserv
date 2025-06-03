@@ -1,38 +1,50 @@
 #include "Log.hpp"
+#include <stdarg.h>
 
-Log::Log() {}
+#include <ctime>
+#include <iomanip>
+#include <iostream>
 
-Log::~Log() {}
-
-void	Log::info(const std::string& message)
+void displayTimestamp(void)
 {
-	std::cout << GREEN << "[INFO] " << RESET << message << std::endl;
+    std::time_t time = std::time(NULL);
+	std::tm		*tm = std::localtime(&time);
+
+	int	h = tm->tm_hour;
+	int	min = tm->tm_min;
+	int	s = tm->tm_sec;
+	std::cout << GRAY << "["
+		<< std::setfill('0') << std::setw(2) << h << ":"
+		<< std::setfill('0') << std::setw(2) << min << ":"
+		<< std::setfill('0') << std::setw(2) << s << "] ";
 }
 
-void	Log::warning(const std::string& message)
+Log::Log(Log::Type type)
 {
-	std::cout << YELLOW << "[WARNING] " << RESET << message << std::endl;
-}
-
-void	Log::error(const std::string& message)
-{
-	std::cerr << RED << "[ERROR] " << RESET << message << std::endl;
-}
-
-void	Log::debug(const std::string& message)
-{
-	std::cout << BLUE << "[DEBUG] " << RESET << message << std::endl;
-}
-
-void Log::log(const std::string& message, const std::string& type)
-{
-	switch (type[0])
+	displayTimestamp();	
+	switch (type)
 	{
-		case 'i': info(message); break ;
-		case 'w': warning(message); break ;
-		case 'e': error(message); break ;
-		case 'd': debug(message); break ;
-		default:
-			std::cerr << "Unknown log type: " << type << std::endl;
+		case LOG:
+			std::cout << GRAY << "[LOG]     " << RESET;
+			break;
+		case WARNING:
+			std::cout << YELLOW << "[WARNING] " << RESET;
+			break;
+		case ERROR: 
+			std::cout << RED << "[ERROR]   " << RESET;
+			break;
+		case ALERT:
+			std::cout << B_RED<< "[ALERT]    " << RESET;
+			break;
+		case DEBUG:
+			std::cout << PURPLE << "[DEBUG]   " << RESET;
+			break;
 	}
 }
+
+
+Log::~Log()
+{
+	std::cout << oss.str() << RESET << std::endl;
+}
+

@@ -5,7 +5,7 @@ int main (int argc, char *argv[])
 {
 	if (argc > 2)
 	{
-		log("Usage: ./webserv [config_file]", "e");
+		Log(Log::WARNING) << "Usage: ./webserv [config_file]";
 		return (1);
 	}
 
@@ -26,3 +26,5 @@ int main (int argc, char *argv[])
 	}
 	return (0);
 }
+
+

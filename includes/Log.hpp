@@ -22,21 +22,33 @@
 # define B_CYAN		"\033[46m"
 # define B_WHITE	"\033[47m"
 
-#include <iostream>
+#include <sstream>
 
 class Log
 {
-	private:
-		static void	info(const std::string& message);
-		static void	warning(const std::string& message);
-		static void	error(const std::string& message);
-		static void	debug(const std::string& message);
+private:
+	std::ostringstream oss;
 
-	public:
-		Log();
-		~Log();
+public:
+	enum Type
+	{
+		LOG = 0,
+		DEBUG,
+		WARNING,
+		ERROR,
+		ALERT,
+	};
 
-		static void	log(const std::string& message, const std::string& type);
+	Log(Log::Type = Log::LOG);
+	~Log();
+
+	template <typename T>
+	Log& operator<<(const T& value)
+	{
+		oss << value << " ";
+		return *this;
+	}
+
 };
 
 #endif

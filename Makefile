@@ -14,7 +14,9 @@ endif
 VPATH = srcs
 
 SRCS =	main.cpp	\
-		Webserv.cpp
+		Webserv.cpp	\
+		Parser.cpp	\
+		Log.cpp		\
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 DEPS = $(OBJS:.o=.d)

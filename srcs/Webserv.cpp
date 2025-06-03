@@ -1,5 +1,6 @@
 #include "Webserv.hpp"
-#include "Color.hpp"
+#include "Parser.hpp"
+#include "Log.hpp"
 
 Webserv::Webserv()
 	: _servers()
@@ -16,6 +17,7 @@ Webserv::Webserv()
 Webserv::Webserv(const std::string& file)
 	: _servers()
 {
+	Parser parser(file);
 	(void)file;
 }
 
@@ -25,5 +27,5 @@ Webserv::~Webserv()
 
 void Webserv::run()
 {
-	std::cout << GRAY << "Running web server..." << RESET << std::endl;
+	Log() << "Running web server...";	
 }
