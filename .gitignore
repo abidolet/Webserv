@@ -2,7 +2,7 @@
 !conf
 !includes
 !srcs
-Makefile
+!Makefile
 !*.hpp
 !*.cpp
 !*.tpp
