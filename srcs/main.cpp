@@ -1,29 +1,28 @@
 #include "Webserv.hpp"
+#include "Log.hpp"
 
 int main (int argc, char *argv[])
 {
 	if (argc > 2)
 	{
-		std::cerr << "Error: Too many arguments" << std::endl;
+		log("Usage: ./webserv [config_file]", "e");
 		return (1);
 	}
 
 	try
 	{
-		if (argc == 1)
+		Webserv	server;
+		if (argc == 2)
 		{
-			Webserv	serv;
+			Webserv	server(argv[1]);
 		}
-		else
-		{
-			Webserv	serv(argv[1]);
-		}
-		// Other functions
-		return (0);
+
+		server.run();
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << "Error: " << e.what() << std::endl;
+		std::cerr << RED << "Error: " << e.what() << RESET << std::endl;
 		return (1);
 	}
+	return (0);
 }

@@ -57,7 +57,7 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all leaks clean fclean re debug
+.PHONY: all leaks clean fclean re debug leaks
 
 -include $(DEPS)
 .SILENT:

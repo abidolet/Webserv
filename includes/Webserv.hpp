@@ -1,5 +1,5 @@
-#ifndef WEBSERV
-#define WEBSERV
+#ifndef WEBSERV_HPP
+# define WEBSERV_HPP
 
 #include <iostream>
 #include <vector>
@@ -23,17 +23,20 @@ struct Server
 	std::map<int, std::string>	error_pages;
 	size_t						client_max_body_size;
 	std::vector<Location>		locations;
+	int							fd;
 };
 
 class Webserv
 {
 	private:
-		std::vector<Server>	servers;
-	
+		std::vector<Server>	_servers;
+
 	public:
 		Webserv();
 		Webserv(const std::string& file);
 		~Webserv();
+
+		void	run();
 };
 
 #endif
