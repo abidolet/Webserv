@@ -3,20 +3,29 @@
 #include <csignal>
 #include <cstdlib>
 
-void handle_signal(int signal)
+std::string	get_sig_name(int signal)
 {
-	if (signal == SIGINT)
+	switch (signal)
+	{
+		case SIGINT: return ("SIGINT");
+		case SIGQUIT: return ("SIGQUIT");
+		case SIGTERM: return ("SIGTERM");
+		default: return ("Other signal");
+	}
+}
+
+void	handle_signal(int signal)
+{
+	if (signal == SIGINT || signal == SIGQUIT || signal == SIGTERM)
 	{
 		std::cout << std::endl;
-		Log() << "Received SIGINT, shutting down..." << Log::endl();
-		exit(0);
+		Log() << "Process terminating with default action of signal" << signal << get_sig_name(signal) << Log::endl();
+		throw std::runtime_error("exit");
 	}
 }
 
 int main (int argc, char *argv[])
 {
-	signal(SIGINT, handle_signal);
-
 	if (argc > 2)
 	{
 		Log(Log::WARNING) << "Usage: ./webserv [config_file]" << Log::endl();
@@ -25,6 +34,11 @@ int main (int argc, char *argv[])
 
 	try
 	{
+		signal(SIGINT, handle_signal);
+		signal(SIGQUIT, handle_signal);
+		signal(SIGTERM, handle_signal);
+		signal(SIGPIPE, SIG_IGN);
+
 		Webserv	server;
 		if (argc == 2)
 		{
@@ -35,8 +49,11 @@ int main (int argc, char *argv[])
 	}
 	catch (const std::exception& e)
 	{
-		Log(Log::ERROR) << e.what() << Log::endl();
-		return (1);
+		if (static_cast<std::string>(e.what()) != "exit")
+		{
+			Log(Log::ERROR) << e.what() << Log::endl();
+			return (1);
+		}
 	}
 	return (0);
 }

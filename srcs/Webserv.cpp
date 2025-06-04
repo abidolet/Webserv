@@ -14,7 +14,7 @@
 Webserv::Webserv()
 	: _servers(), _epoll_fd(-1), _listener_fd(-1)
 {
-	Server  default_server;
+	Server	default_server;
 
 	default_server.port = 8080;
 	default_server.host = "0.0.0.0";
@@ -111,11 +111,11 @@ void Webserv::run()
 		return;
 	}
 
-	struct	epoll_event events[MAX_EVENTS];
-	const int maxevents = MAX_EVENTS;
-	int nfds;
+	struct		epoll_event events[MAX_EVENTS];
+	const int	maxevents = MAX_EVENTS;
+	int			nfds;
 
-	while (1)
+	while (true)
 	{
 		nfds = epoll_wait(_epoll_fd, events, maxevents, -1);
 		if (nfds == -1)
@@ -147,7 +147,7 @@ void Webserv::run()
 				if (setnonblocking(client) == -1)
 				{
 					close(client);
-					continue;
+					continue ;
 				}
 
 				ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
@@ -182,10 +182,10 @@ void Webserv::run()
 						continue;
 					}
 
-					std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+					std::string	response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
 					response += "<html><body><h1>Hello from webserv</h1></body></html>\n";
 
-					ssize_t bytes_sent = send(events[n].data.fd, response.c_str(), response.size(), 0);
+					ssize_t	bytes_sent = send(events[n].data.fd, response.c_str(), response.size(), 0);
 					if (bytes_sent == -1)
 					{
 						Log(Log::ERROR) << "send error" << Log::endl();
