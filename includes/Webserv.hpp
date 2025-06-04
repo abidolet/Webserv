@@ -31,6 +31,9 @@ class Webserv
 	private:
 		std::vector<Server>	_servers;
 
+		int					_epoll_fd;
+		int					_listener_fd;
+
 	public:
 		Webserv();
 		Webserv(const std::string& file);
