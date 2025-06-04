@@ -1,5 +1,6 @@
 #include "Parser.hpp"
 #include <iostream>
+#include "Log.hpp"
 
 std::vector<std::string> read_file(std::ifstream& stream)
 {
@@ -22,14 +23,20 @@ Parser::Parser(const std::string& filepath)
 		throw std::runtime_error("cannot open " + filepath);
 
 	m_file = read_file(m_stream); 
-
-	for (size_t i = 0; i < m_file.size(); i++)
-	{
-		std::cout << m_file[i] << std::endl;
-	}
+	loadBlock();
 }
 
-// std::vector<std::string> read_block()
-// {
-//
-// }
+void Parser::loadBlock()
+{
+	std::vector<std::string>::iterator it = m_file.begin();
+
+	while (it != m_file.end())
+	{
+		if (it->find("{") != it->size())
+			Log() << "found block start";
+		// if (it->find("}"))
+		// 	Log() << "found block end";
+		Log(Log::DEBUG) << *it;	
+		it++;
+	}
+}

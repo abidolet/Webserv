@@ -5,7 +5,7 @@ int main (int argc, char *argv[])
 {
 	if (argc > 2)
 	{
-		Log(Log::WARNING) << "Usage: ./webserv [config_file]";
+		Log(Log::WARNING) << "Usage: ./webserv [config_file]" << Log::endl();
 		return (1);
 	}
 
@@ -21,7 +21,7 @@ int main (int argc, char *argv[])
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << RED << "Error: " << e.what() << RESET << std::endl;
+		Log(Log::ERROR) << e.what() << Log::endl();
 		return (1);
 	}
 	return (0);

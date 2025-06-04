@@ -23,13 +23,14 @@
 # define B_WHITE	"\033[47m"
 
 #include <sstream>
+#include <iostream>
 
 class Log
 {
-private:
-	std::ostringstream oss;
-
 public:
+	//
+	// Internal class
+	//
 	enum Type
 	{
 		LOG = 0,
@@ -39,13 +40,35 @@ public:
 		ALERT,
 	};
 
+	class endl
+	{
+
+	};
+
+private:
+	std::ostringstream	m_oss;
+	Type				m_type;
+
+public:
 	Log(Log::Type = Log::LOG);
-	~Log();
+	void displayTimestamp(void);
+
 
 	template <typename T>
 	Log& operator<<(const T& value)
 	{
-		oss << value << " ";
+		m_oss << value << " ";
+		return *this;
+	}
+
+	template <>
+	Log& operator<<<Log::endl>(const Log::endl& value)
+	{
+		(void)value;
+		if (m_type == LOG || m_type == DEBUG)
+			std::cout << m_oss.str() << RESET << std::endl;
+		else
+			std::cerr << m_oss.str() << RESET << std::endl;
 		return *this;
 	}
 

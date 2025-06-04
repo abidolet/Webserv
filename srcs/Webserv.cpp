@@ -27,5 +27,5 @@ Webserv::~Webserv()
 
 void Webserv::run()
 {
-	Log() << "Running web server...";	
+	Log() << "Running web server..." << Log::endl();	
 }

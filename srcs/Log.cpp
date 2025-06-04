@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 
-void displayTimestamp(void)
+void Log::displayTimestamp(void)
 {
     std::time_t time = std::time(NULL);
 	std::tm		*tm = std::localtime(&time);
@@ -13,7 +13,7 @@ void displayTimestamp(void)
 	int	h = tm->tm_hour;
 	int	min = tm->tm_min;
 	int	s = tm->tm_sec;
-	std::cout << GRAY << "["
+	m_oss << GRAY << "["
 		<< std::setfill('0') << std::setw(2) << h << ":"
 		<< std::setfill('0') << std::setw(2) << min << ":"
 		<< std::setfill('0') << std::setw(2) << s << "] ";
@@ -21,30 +21,26 @@ void displayTimestamp(void)
 
 Log::Log(Log::Type type)
 {
+	m_type = type;	
 	displayTimestamp();	
 	switch (type)
 	{
 		case LOG:
-			std::cout << GRAY << "[LOG]     " << RESET;
+			m_oss << GRAY << "[LOG]     " << RESET;
 			break;
 		case WARNING:
-			std::cout << YELLOW << "[WARNING] " << RESET;
+			m_oss << YELLOW << "[WARNING] " << RESET;
 			break;
 		case ERROR: 
-			std::cout << RED << "[ERROR]   " << RESET;
+			m_oss << RED << "[ERROR]   " << RESET;
 			break;
 		case ALERT:
-			std::cout << B_RED<< "[ALERT]    " << RESET;
+			m_oss << B_RED<< "[ALERT]    " << RESET;
 			break;
 		case DEBUG:
-			std::cout << PURPLE << "[DEBUG]   " << RESET;
+			m_oss << PURPLE << "[DEBUG]   " << RESET;
 			break;
 	}
 }
 
-
-Log::~Log()
-{
-	std::cout << oss.str() << RESET << std::endl;
-}
 

@@ -14,6 +14,8 @@ struct Block
 	std::string block_name;
 	std::vector<std::string>::iterator begin_it; 
 	std::vector<std::string>::iterator end_it; 
+
+	std::vector<Block> inners;
 };
 
 class Parser
@@ -28,7 +30,7 @@ public:
 
 private:
 	std::vector<std::string>	m_file;
-	std::vector<Block>			m_blocks;
+	Block			m_block;
 
 	std::ifstream m_stream;	
 
