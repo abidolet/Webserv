@@ -6,14 +6,17 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 19:02:09 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/05 19:12:22 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(std::string cgi, std::string script, std::string method, std::string query) : cgi(cgi), script(script), method(method), query(query){}
+CgiHandler::CgiHandler(std::string cgi, std::string script, std::string method, std::string query) : cgi(cgi), script(script), method(method), query(query), bodySent(false)
+{
+	this->createPipes();
+}
 
 CgiHandler::CgiHandler(const CgiHandler& other){}
 
@@ -22,9 +25,17 @@ CgiHandler& CgiHandler::operator=(const CgiHandler& other){return (*this);}
 CgiHandler::~CgiHandler(){}
 /* End-Of Canonical Form */
 
+void		CgiHandler::addBody(std::string body)
+{
+	write (this->pipes.to_cgi[1], body.c_str(), body.length());
+	this->bodySent = true;
+}
+
 std::string	CgiHandler::launch()
 {
-	this->createPipes();
+	if ((this->method == "POST" || this->method == "DELETE") && !this->bodySent)
+		throw std::runtime_error("This request need body before executing");
+
 	this->pid = fork();
 
 	if (pid < 0)

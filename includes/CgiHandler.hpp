@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 19:01:49 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/05 19:10:10 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ public:
 	CgiHandler(std::string cgi, std::string script, std::string method, std::string query);
 	~CgiHandler();
 
+	void		addBody(std::string body);
 	std::string	launch();
 
 protected:
@@ -45,6 +46,8 @@ private:
 	std::string script;
 	std::string method;
 	std::string query;
+
+	bool		bodySent;
 
 	t_pipes		pipes;
 
