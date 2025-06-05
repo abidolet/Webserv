@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 13:46:22 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/05 16:10:10 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@ CgiHandler& CgiHandler::operator=(const CgiHandler& other){return (*this);}
 CgiHandler::~CgiHandler(){}
 /* End-Of Canonical Form */
 
-std::string	CgiHandler::handleCgi(std::string query, std::string script, std::string method, std::string addr, int client)
+std::string	CgiHandler::handleCgi(std::string query, std::string script, std::string method, std::string addr)
 {
 	t_pipes	pipes = createPipes();
 	int		pid = fork();
@@ -32,7 +32,7 @@ std::string	CgiHandler::handleCgi(std::string query, std::string script, std::st
 	if (pid == 0)
 		childProcess(pipes, query, script, method, addr);
 	else
-		return father(pipes);
+		return father(pipes, pid);
 }
 
 t_pipes	CgiHandler::createPipes()
@@ -84,7 +84,7 @@ void	CgiHandler::childProcess(t_pipes pipes, std::string query, std::string scri
 	throw	std::runtime_error("execve failed");
 }
 
-std::string	CgiHandler::father(t_pipes pipes)
+std::string	CgiHandler::father(t_pipes pipes, int pid)
 {
 	int status;
     char buffer[1024];
