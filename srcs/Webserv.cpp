@@ -27,6 +27,7 @@ Webserv::Webserv(const std::string& file)
 	: _servers(), _epoll_fd(-1), _listener_fd(-1)
 {
 	Parser parser(file);
+	parser.populateServerInfos();
 	(void)file;
 }
 

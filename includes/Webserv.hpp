@@ -16,6 +16,9 @@ struct Location
 
 struct Server
 {
+	Server() // TODO: penser a recheck les valeur
+		: port(8080), host("localhost"), server_name("localhost"), is_default(true), client_max_body_size(100), fd(-1) {}
+
 	int							port;
 	std::string					host;
 	std::string					server_name;

@@ -32,6 +32,8 @@ int main (int argc, char *argv[])
 		return (1);
 	}
 
+	// Log::disableFlags(F_DEBUG | F_LOG);
+
 	try
 	{
 		signal(SIGINT, handle_signal);

@@ -35,7 +35,7 @@ all:
 
 debug:
 	$(MAKE) MODE=debug all
-	./webserv
+	./webserv ./conf/default.conf
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
