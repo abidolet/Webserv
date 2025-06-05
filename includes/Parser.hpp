@@ -9,13 +9,16 @@ struct Server;
 
 #define DEFAULT_CONF_PATH "./conf/default.conf"
 
-struct Block
+class Block
 {
-	std::string block_name;
-	std::vector<std::string>::iterator begin_it; 
-	std::vector<std::string>::iterator end_it; 
+public:
+	Block(std::string name) : block_name(name) {}
 
-	std::vector<Block> inners;
+
+	std::string block_name;
+
+	std::vector<std::string>	content;
+	std::vector<Block>			inners;
 };
 
 class Parser
@@ -24,17 +27,18 @@ public:
 	Parser(const std::string& filepath);
 	~Parser() {};
 
+	Server	populateServerInfos();
 
-	void	loadBlock();
+private:
+	Block	loadBlock(std::vector<std::string>::iterator& it, std::string name);
+	void	parseBlock();
 	void	loadFile();
 
 private:
 	std::vector<std::string>	m_file;
-	Block			m_block;
-
-	std::ifstream m_stream;	
-
-	std::string default_config_path;
+	Block						m_block;
+	std::ifstream				m_stream;	
+	std::string					default_config_path;
 };
 
 #endif // !PARSER_HPP
