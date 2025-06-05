@@ -6,14 +6,14 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 18:30:14 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/05 18:36:58 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(std::string query, std::string script, std::string method, std::string addr) : query(query), script(script), method(method), addr(addr){}
+CgiHandler::CgiHandler(std::string cgi, std::string query, std::string script, std::string method, std::string addr) : cgi(cgi), query(query), script(script), method(method), addr(addr){}
 
 CgiHandler::CgiHandler(const CgiHandler& other){}
 
@@ -62,7 +62,7 @@ void	CgiHandler::cgiSetEnv()
 
 void	CgiHandler::childProcess()
 {
-	char* args[] = { const_cast<char*>(script.c_str()), NULL };
+	char* args[] = { const_cast<char*>(this->cgi.c_str()), const_cast<char*>(this->script.c_str()), NULL };
 
 	close(pipes.to_cgi[1]);
 	close(pipes.from_cgi[0]);
@@ -73,7 +73,7 @@ void	CgiHandler::childProcess()
 	close(pipes.from_cgi[1]);
 
 	this->cgiSetEnv();
-	execve(script.c_str(), args, this->env);
+	execve(this->cgi.c_str(), args, this->env);
 	
 	throw	std::runtime_error("execve failed");
 }
