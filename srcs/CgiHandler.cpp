@@ -6,14 +6,14 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 18:52:25 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/05 19:02:09 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(std::string cgi, std::string script, std::string query, std::string method, std::string addr) : cgi(cgi), script(script), query(query), method(method), addr(addr){}
+CgiHandler::CgiHandler(std::string cgi, std::string script, std::string method, std::string query) : cgi(cgi), script(script), method(method), query(query){}
 
 CgiHandler::CgiHandler(const CgiHandler& other){}
 
@@ -53,7 +53,6 @@ void	CgiHandler::cgiSetEnv()
 	this->envStr[0].append(method);
 	this->envStr[1].append(query);
 	this->envStr[2].append(script);
-	this->envStr[4].append(addr);
 
 	for (int i = 0 ; i < 5 ; ++i)
 		this->env[i] = const_cast<char*>(this->envStr[i].c_str());
@@ -98,13 +97,15 @@ std::string	CgiHandler::father()
 
     waitpid(pid, &status, 0);
 
-	if (WIFEXITED(status)) 
-	{
-        if (WEXITSTATUS(status) == 0) 
-			return cgi_output;
-        else 
-            throw std::runtime_error("PHP CGI script failed");
-    }
-	else
-    	throw std::runtime_error("PHP CGI script terminated abnormally\n");
+	return cgi_output;
+
+	// if (WIFEXITED(status)) 
+	// {
+    //     if (WEXITSTATUS(status) == 0) 
+	// 		return cgi_output;
+    //     else 
+    //         throw std::runtime_error("PHP CGI script failed");
+    // }
+	// else
+    // 	throw std::runtime_error("PHP CGI script terminated abnormally\n");
 }

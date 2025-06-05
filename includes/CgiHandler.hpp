@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 18:52:01 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/05 19:01:49 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,7 @@ class	CgiHandler
 {
 public:
 
-	CgiHandler(std::string cgi, std::string script, std::string query, std::string method, std::string addr);
+	CgiHandler(std::string cgi, std::string script, std::string method, std::string query);
 	~CgiHandler();
 
 	std::string	launch();
@@ -38,14 +38,13 @@ protected:
 
 private:
 
-	std::string	envStr[6] = {"REQUEST_METHOD=", "QUERY_STRING=", "SCRIPT_NAME=", "SERVER_PROTOCOL=HTTP/1.1", "REMOTE_ADDR="};
+	std::string	envStr[6] = {"REQUEST_METHOD=", "QUERY_STRING=", "SCRIPT_FILENAME=", "SERVER_PROTOCOL=HTTP/1.1", "REDIRECT_STATUS=CGI"};
 	char**		env;
 
 	std::string	cgi;
 	std::string script;
-	std::string query;
 	std::string method;
-	std::string addr;
+	std::string query;
 
 	t_pipes		pipes;
 
