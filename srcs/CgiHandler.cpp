@@ -6,15 +6,31 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 14:26:10 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 19:44:25 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(std::string cgi, std::string script, std::string method, std::string query) : cgi(cgi), script(script), method(method), query(query), bodySent(false), pipesOpened(false), executed(false)
+CgiHandler::CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
+: cgi(cgi), script(script), asBody(false), bodySent(false), pipesOpened(false), executed(false)
 {
+	if (contentLength.length() > 1)
+	{
+		this->envConstruct[CONTENT_LENGTH].append(contentLength);
+		this->envConstruct[CONTENT_TYPE].append(contentType);
+		this->asBody = true;
+	}
+	this->envConstruct[REQUEST_METHOD].append(method);
+	this->envConstruct[SCRIPT_FILENAME].append(script);
+	this->envConstruct[SCRIPT_NAME].append(script);
+
+	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
+
+	for (int i = 0; i < ENV_SIZE; ++i)
+		this->env[i] = const_cast<char*>(this->envConstruct[i].c_str());
+	this->env[ENV_SIZE] = NULL;
 	this->createPipes();
 }
 
@@ -29,7 +45,7 @@ CgiHandler::~CgiHandler()
 }
 /* End-Of Canonical Form */
 
-void		CgiHandler::addBody(std::string body)
+void		CgiHandler::addBody(const std::string& body)
 {
 	write (this->pipes.to_cgi[INPUT], body.c_str(), body.length());
 	this->bodySent = true;
@@ -47,7 +63,7 @@ std::string	CgiHandler::launch()
 		Log(Log::ERROR) << "Pipes not opened, can't executed" << Log::endl();
 		return NULL;
 	}
-	if (this->method == "POST" && !this->bodySent)
+	if (this->asBody && !this->bodySent)
 		Log(Log::ERROR) << "This request need body before executing" << Log::endl();
 
 	this->pid = fork();
@@ -81,17 +97,6 @@ void	CgiHandler::closePipes()
 	this->pipesOpened = false;
 }
 
-void	CgiHandler::cgiSetEnv()
-{
-	this->envStr[0].append(method);
-	this->envStr[1].append(query);
-	this->envStr[2].append(script);
-
-	for (int i = 0 ; i < 5 ; ++i)
-		this->env[i] = const_cast<char*>(this->envStr[i].c_str());
-	this->env[5] = NULL;
-}
-
 void	CgiHandler::childProcess()
 {
 	char* args[] = { const_cast<char*>(this->cgi.c_str()), const_cast<char*>(this->script.c_str()), NULL };
@@ -104,7 +109,6 @@ void	CgiHandler::childProcess()
 	close(pipes.to_cgi[OUTPUT]);
 	close(pipes.from_cgi[INPUT]);
 
-	this->cgiSetEnv();
 	execve(this->cgi.c_str(), args, this->env);
 	
 	Log(Log::ERROR) << "Execve failed" << Log::endl();
