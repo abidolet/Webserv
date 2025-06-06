@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 19:58:48 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 20:04:08 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,22 +16,7 @@
 CgiHandler::CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
 : cgi(cgi), script(script)
 {
-	if (contentLength.length() > 1)
-	{
-		this->envConstruct[CONTENT_LENGTH].append(contentLength);
-		this->envConstruct[CONTENT_TYPE].append(contentType);
-		this->info[AS_BODY] = true;
-	}
-	this->envConstruct[REQUEST_METHOD].append(method);
-	this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
-	this->envConstruct[SCRIPT_FILENAME].append(script);
-	this->envConstruct[SCRIPT_NAME].append(script);
-
-	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
-
-	for (int i = 0; i < ENV_SIZE; ++i)
-		this->env[i] = const_cast<char*>(this->envConstruct[i].c_str());
-	this->env[ENV_SIZE] = NULL;
+	this->constructEnv(cgi, method, contentType, contentLength, script);
 	this->createPipes();
 }
 
@@ -89,6 +74,27 @@ void	CgiHandler::createPipes()
 	this->info[PIPES_OPENED] = true;
 }
 
+void	CgiHandler::constructEnv(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
+{
+	if (contentLength.length() > 1)
+	{
+		this->envConstruct[CONTENT_LENGTH].append(contentLength);
+		this->envConstruct[CONTENT_TYPE].append(contentType);
+		this->info[AS_BODY] = true;
+	}
+	
+	this->envConstruct[REQUEST_METHOD].append(method);
+	this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
+	this->envConstruct[SCRIPT_FILENAME].append(script);
+	this->envConstruct[SCRIPT_NAME].append(script);
+
+	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
+
+	for (int i = 0; i < ENV_SIZE; ++i)
+		this->env[i] = const_cast<char*>(this->envConstruct[i].c_str());
+	this->env[ENV_SIZE] = NULL;
+}
+
 void	CgiHandler::closePipes()
 {
 	close(this->pipes.from_cgi[OUTPUT]);
@@ -100,7 +106,7 @@ void	CgiHandler::closePipes()
 
 void	CgiHandler::childProcess()
 {
-	char* args[] = { const_cast<char*>(this->cgi.c_str()), const_cast<char*>(this->script.c_str()), NULL };
+	char* args[] = {const_cast<char*>(this->script.c_str()), NULL};
 
 	close(pipes.to_cgi[INPUT]);
 	close(pipes.from_cgi[OUTPUT]);

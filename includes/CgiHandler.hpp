@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 19:59:06 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 20:01:18 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,7 +107,7 @@ class	CgiHandler
 {
 public:
 
-	CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& url);
+	CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script);
 	~CgiHandler();
 
 	void		addBody(const std::string& body);
@@ -152,6 +152,7 @@ private:
 	int			pid;
 
 	void		createPipes();
+	void		constructEnv(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script);
 	void		closePipes();
 	void		childProcess();
 	std::string	father();
