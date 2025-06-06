@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 19:49:44 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 19:59:06 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,13 +21,14 @@
 
 #include "Log.hpp"
 
-#define	INPUT	1
-#define OUTPUT	0
+#define	INPUT					1
+#define OUTPUT					0
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
 #define	DEFAULT_SERVER_ROOT		"/home/ygille/42/www/"
 
-#define ENV_SIZE	LAST_ELEM + 1
+#define ENV_SIZE				ENV_LAST_ELEM + 1
+#define	INFO_SIZE				INFO_LAST_ELEM + 1
 
 /*	example URL
 	http://example.com/cgi-bin/script.cgi/extra/path/file.txt?key=value&foo=bar
@@ -84,7 +85,16 @@ enum
 	SCRIPT_FILENAME,
 	REDIRECT_STATUS,
 	GATEWAY_INTERFACE,
-	LAST_ELEM = GATEWAY_INTERFACE
+	ENV_LAST_ELEM = GATEWAY_INTERFACE
+};
+
+enum
+{
+	AS_BODY = 0,
+	BODY_SENT,
+	PIPES_OPENED,
+	EXECUTED,
+	INFO_LAST_ELEM = EXECUTED
 };
 
 typedef struct	s_pipes
@@ -135,10 +145,7 @@ private:
 	std::string	cgi;
 	std::string script;
 
-	bool		asBody;
-	bool		bodySent;
-	bool		pipesOpened;
-	bool		executed;
+	bool		info[INFO_SIZE] = {false, false, false, false};
 
 	t_pipes		pipes;
 

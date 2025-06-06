@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 19:49:05 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 19:58:48 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,13 +14,13 @@
 
 /* Canonical Form */
 CgiHandler::CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
-: cgi(cgi), script(script), asBody(false), bodySent(false), pipesOpened(false), executed(false)
+: cgi(cgi), script(script)
 {
 	if (contentLength.length() > 1)
 	{
 		this->envConstruct[CONTENT_LENGTH].append(contentLength);
 		this->envConstruct[CONTENT_TYPE].append(contentType);
-		this->asBody = true;
+		this->info[AS_BODY] = true;
 	}
 	this->envConstruct[REQUEST_METHOD].append(method);
 	this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
@@ -41,7 +41,7 @@ CgiHandler& CgiHandler::operator=(const CgiHandler& other){return (*this);}
 
 CgiHandler::~CgiHandler()
 {
-	if (!this->executed)
+	if (!this->info[EXECUTED])
 		this->closePipes();
 }
 /* End-Of Canonical Form */
@@ -49,22 +49,22 @@ CgiHandler::~CgiHandler()
 void		CgiHandler::addBody(const std::string& body)
 {
 	write (this->pipes.to_cgi[INPUT], body.c_str(), body.length());
-	this->bodySent = true;
+	this->info[BODY_SENT] = true;
 }
 
 std::string	CgiHandler::launch()
 {
-	if (this->executed)
+	if (this->info[EXECUTED])
 	{
 		Log(Log::ERROR) << "This CGI request has been already executed" << Log::endl();
 		return NULL;
 	}
-	if (!this->pipesOpened)
+	if (!this->info[PIPES_OPENED])
 	{
 		Log(Log::ERROR) << "Pipes not opened, can't executed" << Log::endl();
 		return NULL;
 	}
-	if (this->asBody && !this->bodySent)
+	if (this->info[AS_BODY] && !this->info[BODY_SENT])
 		Log(Log::ERROR) << "This request need body before executing" << Log::endl();
 
 	this->pid = fork();
@@ -86,7 +86,7 @@ void	CgiHandler::createPipes()
 		Log(Log::ERROR) << "Pipes not opened" << Log::endl();
 		return;
 	}
-	this->pipesOpened = true;
+	this->info[PIPES_OPENED] = true;
 }
 
 void	CgiHandler::closePipes()
@@ -95,7 +95,7 @@ void	CgiHandler::closePipes()
 	close(this->pipes.from_cgi[INPUT]);
 	close(this->pipes.to_cgi[OUTPUT]);
 	close(this->pipes.to_cgi[INPUT]);
-	this->pipesOpened = false;
+	this->info[PIPES_OPENED] = false;
 }
 
 void	CgiHandler::childProcess()
@@ -133,7 +133,7 @@ std::string	CgiHandler::father()
     close(pipes.from_cgi[OUTPUT]);
     close(pipes.to_cgi[INPUT]);
 
-	this->executed = true;
+	this->info[EXECUTED] = true;
 
     waitpid(pid, &status, 0);
 
