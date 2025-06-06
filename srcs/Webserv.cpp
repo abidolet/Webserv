@@ -28,7 +28,9 @@ Webserv::Webserv(const std::string& file)
 {
 	Parser parser(file);
 	parser.populateServerInfos();
-	(void)file;
+
+	Server default_server;
+	_servers.push_back(default_server);
 }
 
 Webserv::~Webserv()
