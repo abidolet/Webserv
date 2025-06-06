@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 19:10:10 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 13:35:24 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,11 @@
 #include <cstdlib>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include "Log.hpp"
+
+#define	INPUT	1
+#define OUTPUT	0
 
 typedef struct	s_pipes
 {
@@ -48,6 +53,8 @@ private:
 	std::string query;
 
 	bool		bodySent;
+	bool		pipesOpened;
+	bool		executed;
 
 	t_pipes		pipes;
 
