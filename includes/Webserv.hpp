@@ -7,9 +7,12 @@
 
 struct Location
 {
+	Location()
+		: path("/var/www/html"), root("/"), index("index.html"), cgi_pass("TODO"), cgi_extensions(std::vector<std::string>(1, "TODO")) {}
+
 	std::string					path;
 	std::string					root;
-	std::string					redirect;
+	std::string					index;
 	std::string					cgi_pass;
 	std::vector<std::string>	cgi_extensions;
 };
@@ -17,16 +20,20 @@ struct Location
 struct Server
 {
 	Server() // TODO: penser a recheck les valeur
-		: port(8080), host("localhost"), server_name("localhost"), is_default(true), client_max_body_size(100), fd(-1) {}
+		: port(8080), host("0.0.0.0"), server_name("localhost"), client_max_body_size(100), is_default(true), redirection(std::pair<int, std::string>(-1, "NONE")) {}
 
 	int							port;
 	std::string					host;
 	std::string					server_name;
-	bool						is_default;
-	std::map<int, std::string>	error_pages;
+	
 	size_t						client_max_body_size;
+	std::vector<std::string>	allowed_methodes;
+	std::map<int, std::string>	error_pages;
+
 	std::vector<Location>		locations;
-	int							fd;
+
+	bool						is_default;
+	std::pair<int, std::string>	redirection;
 };
 
 class Webserv
