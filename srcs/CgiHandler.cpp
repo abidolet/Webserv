@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 13:42:40 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 14:26:10 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,7 +47,7 @@ std::string	CgiHandler::launch()
 		Log(Log::ERROR) << "Pipes not opened, can't executed" << Log::endl();
 		return NULL;
 	}
-	if ((this->method == "POST" || this->method == "DELETE") && !this->bodySent)
+	if (this->method == "POST" && !this->bodySent)
 		Log(Log::ERROR) << "This request need body before executing" << Log::endl();
 
 	this->pid = fork();
