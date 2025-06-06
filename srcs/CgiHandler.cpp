@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 19:44:25 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 19:49:05 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@ CgiHandler::CgiHandler(const std::string& cgi, const std::string& method, const 
 		this->asBody = true;
 	}
 	this->envConstruct[REQUEST_METHOD].append(method);
+	this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
 	this->envConstruct[SCRIPT_FILENAME].append(script);
 	this->envConstruct[SCRIPT_NAME].append(script);
 

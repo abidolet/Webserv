@@ -8,3 +8,8 @@
 !*.cpp
 !*.tpp
 !*.conf
+!www
+!*.html
+!*.php
+!test
+!*_tester

@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 19:43:05 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 19:49:44 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@
 #define OUTPUT	0
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
-#define	DEFAULT_SERVER_ROOT		"/hone/ygille/42/www"
+#define	DEFAULT_SERVER_ROOT		"/home/ygille/42/www/"
 
 #define ENV_SIZE	LAST_ELEM + 1
 
