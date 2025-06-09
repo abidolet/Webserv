@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <exception>
 
 struct Server;
 
@@ -38,7 +39,28 @@ private:
 	std::vector<std::string>	m_file;
 	Block						m_block;
 	std::ifstream				m_stream;	
+	std::string					m_filepath;
 	std::string					default_config_path;
+
+
+public:
+	class InvalidArgumentException : public std::exception
+	{
+	private:
+		std::string m_wrong;
+		std::string m_right;
+
+	public:
+		const char* what() const throw() 
+		{
+			static std::string error = "invalid identifier: " + m_wrong + "'; did you mean: `" + m_right + "' ?"; 
+			return error.c_str();
+		}
+
+		virtual ~InvalidArgumentException() throw() {}
+		InvalidArgumentException(std::string wrong, std::string right) : m_wrong(wrong), m_right(right) {}
+
+	};
 };
 
 #endif // !PARSER_HPP

@@ -2,8 +2,6 @@
 #include <cmath>
 #include "fstream"
 
-#include <iostream>
-
 namespace Tools
 {
 	bool	should_add_line(std::string line)
@@ -35,6 +33,7 @@ namespace Tools
 		str = str.substr(0, str.find_last_not_of(set) + 1);
 		return str;
 	}
+
 	int getStrValue(std::string str)
 	{
 		int		value = 0;
@@ -86,10 +85,14 @@ namespace Tools
 	{
 		int idx = 0;
 		int	str_val = getStrValue(str);
+		std::vector<std::string> strs;
+		
+		str = toLower(str);
+		strs = toLowers(options);
 
 		for (size_t i = 0; i < options.size(); i++)
 		{
-			if (std::abs(getStrValue(options[i]) - str_val) < std::abs(getStrValue(options[idx]) - str_val))
+			if (std::abs(getStrValue(strs[i]) - str_val) < std::abs(getStrValue(strs[idx]) - str_val))
 			{
 				idx = i;
 			}
@@ -97,4 +100,52 @@ namespace Tools
 		return options[idx];
 	}
 
+	std::string toLower(std::string str)
+	{
+		for (size_t i = 0; i < str.size(); i++)
+		{
+			str[i] = std::tolower(str[i]);
+		}
+		return str;
+	}
+
+	std::vector<std::string> toLowers(std::vector<std::string> strs)
+	{
+		std::vector<std::string>::iterator it = strs.begin();
+		while (it != strs.end())
+		{
+			for (size_t i = 0; i < it->size(); i++)
+			{
+				(*it)[i] = std::tolower((*it)[i]);
+			}
+			it++;
+		}
+		return strs;
+	}
+
+	bool is_number(std::string str)
+	{
+		for (size_t i = 0; i < str.size(); i++)
+		{
+			if (std::isdigit(str[i]) == false)
+				return false;
+		}
+		return true;
+	}
+
+	bool is_number(std::vector<std::string> strs)
+	{
+		std::vector<std::string>::iterator it = strs.begin();
+
+		while (it != strs.end())
+		{
+			for (size_t i = 0; i < it->size(); i++)
+			{
+				if (std::isdigit((*it)[i]) == false)
+					return false;
+			}
+			it++;
+		}
+		return true;
+	}
 }

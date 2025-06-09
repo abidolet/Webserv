@@ -63,7 +63,7 @@ Log::Log(Log::Type type)
 			m_oss << B_RED<< "[ALERT]    " << RESET;
 			break;
 		case DEBUG:
-			m_oss << PURPLE << "[DEBUG]   " << RESET;
+			m_oss << PURPLE << "[DEBUG]   " << GRAY;
 			break;
 		case SUCCESS:
 			m_oss << GREEN << "[SUCCESS] " << RESET;

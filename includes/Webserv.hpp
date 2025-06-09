@@ -20,7 +20,16 @@ struct Location
 struct Server
 {
 	Server() // TODO: penser a recheck les valeur
-		: port(8080), host("0.0.0.0"), server_name("localhost"), client_max_body_size(100), is_default(true), redirection(std::pair<int, std::string>(-1, "NONE")) {}
+		: port(8080), host("0.0.0.0"), server_name("localhost"), client_max_body_size(100), is_default(true), redirections()
+	{
+			// redirections.insert(std::pair<int, std::string>(404, "/error/404.html"));
+			// redirections.insert(std::pair<int, std::string>(403, "/error/page_error.html"));
+			// redirections.insert(std::pair<int, std::string>(401, "/error/page_error.html"));
+			// redirections.insert(std::pair<int, std::string>(406, "/error/page_error.html"));
+			// redirections.insert(std::pair<int, std::string>(418, "/error/teapot.html"));
+	}
+
+
 
 	int							port;
 	std::string					host;
@@ -33,7 +42,8 @@ struct Server
 	std::vector<Location>		locations;
 
 	bool						is_default;
-	std::pair<int, std::string>	redirection;
+
+	std::map<int, std::string>	redirections;
 };
 
 class Webserv
