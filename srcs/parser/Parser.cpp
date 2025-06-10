@@ -128,13 +128,12 @@ void printServConfig(Server serv)
 	Log(Log::DEBUG) << "\t|-> server_name:" << serv.server_name << Log::endl();
 	Log(Log::DEBUG) << "\t|-> client_max_body_size:" << serv.client_max_body_size << Log::endl();
 	Log(Log::DEBUG) << "\t|-> allowed methods:" << Tools::strUnite(serv.allowed_methods, ",") << Log::endl();
-	Log(Log::DEBUG) << "\t|-> is_default:" << serv.is_default << Log::endl();
 
 	// printing redirections
 	{
-		Log(Log::DEBUG) << "\t|->" << serv.redirections.size() << "redirecions" << Log::endl();
-		std::map<int, std::string>::iterator it = serv.redirections.begin();
-		while (it != serv.redirections.end())
+		Log(Log::DEBUG) << "\t|->" << serv.error_pages.size() << "error_pages" << Log::endl();
+		std::map<int, std::string>::iterator it = serv.error_pages.begin();
+		while (it != serv.error_pages.end())
 		{
 			Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();
 			it++;
@@ -152,7 +151,7 @@ void printServConfig(Server serv)
 		}
 	}
 
-	// printing each locations
+	// printing each location
 	{
 		Log(Log::DEBUG) << "\t|" << Log::endl();
 		Log(Log::DEBUG) << "\t|->" << serv.locations.size() << "locations" << Log::endl();
@@ -164,17 +163,41 @@ void printServConfig(Server serv)
 			Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> cgi pass:" << it->cgi_pass << Log::endl();
-			Log(Log::DEBUG) << "\t|\t|-> cgi extansions:" << Tools::strUnite(it->cgi_extensions, ",") << Log::endl();
+			Log(Log::DEBUG) << "\t|\t|-> cgi extension:" << Tools::strUnite(it->cgi_extensions, ",") << Log::endl();
 			it++;
 		}
 	}
+}
+
+void setupLocationPath(Location& location, const Block& block)
+{
+	std::vector<std::string> found = getEntries(block, "path");
+	if (found.empty())
+		return;
+	if (found.size() > 1)
+		throw Parser::TooMuchDirectiveException("path", block);
+
+	location.path = found[0];
+	if (location.path[0] != '/')
+		throw std::runtime_error("`path' directive must be an absolute path");
+}
+
+void setupLocationIndex(Location& location, const Block& block)
+{
+	std::vector<std::string> found = getEntries(block, "index");
+	if (found.empty())
+		return;
+	if (found.size() > 1)
+		throw Parser::TooMuchDirectiveException("path", block);
+
+	location.index = found[0];
 }
 
 std::vector<Location> populateLocationInfos(Block serv_block)
 {
 	std::vector<Location> locations;
 
-	const std::string locationOptions[] = {"index", "root"};
+	const std::string locationOptions[] = {"index", "path"};
 	blockAssert(serv_block.inners, std::vector<std::string>(locationOptions, locationOptions + 2), "location");
 
 	std::vector<Block>::iterator it = serv_block.inners.begin();
@@ -182,7 +205,15 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 	{
 		Location tmp;
 
-		// fillEntry(&tmp.path, "path", *it);
+		// root
+		std::vector<std::string> split = Tools::strsplit(it->block_name, ' ');
+		if (split.size() != 2)
+			throw Parser::InvalidDirectiveException("location", it->block_name);
+		tmp.root = split[1];
+		// ---
+
+		setupLocationPath(tmp, *it);
+		setupLocationIndex(tmp, *it);
 
 		locations.push_back(tmp);
 		it++;
@@ -190,6 +221,9 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 	return locations;
 }
 
+//
+// TODO check for format error in the listen directive (e.g: az.by.cvwc.fg323:3243233)
+//
 void	setupListen(Server& serv, const Block &block)
 {
 	std::map<std::string, int>	result;
@@ -292,18 +326,17 @@ void setupRedirections(Server& serv, const Block& block)
 	std::string error_page = redirs[redirs.size() - 1];
 	redirs.pop_back();
 
-	if (Tools::is_number(redirs) == false)
-		throw std::runtime_error("invalid directive: `error_page'");
-	if (error_page[0] != '/')
+	if (	Tools::is_number(redirs) == false)
+		if (error_page[0] != '/')
 		throw std::runtime_error("invalid page path: `error_page'");
 
 	for (size_t i = 0; i < redirs.size(); i++)
 	{
 		int code = std::atoi(redirs[i].c_str());
-		if (serv.redirections.find(code) != serv.redirections.end()) // need to override previous page
-				serv.redirections.find(code)->second = error_page;
+		if (serv.error_pages.find(code) != serv.error_pages.end()) // need to override previous page
+				serv.error_pages.find(code)->second = error_page;
 		else
-			serv.redirections.insert(std::pair<int, std::string>(code, error_page));
+			serv.error_pages.insert(std::pair<int, std::string>(code, error_page));
 	}
 }
 
@@ -359,5 +392,4 @@ Server Parser::populateServerInfos()
 
 // TODO:
 // mettre une exception si u'a deux fois la meme directive (ex host 5 puis apres host 8080)
-//! un server peut avoir plusieur hosts/ports ?
-// reword fillEntry pour pouvoir accepter plusieur fois la meme entry (pour error_page par exemple)
+//! ca crach si on fais une `{` toute seule
