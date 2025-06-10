@@ -6,103 +6,149 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 13:46:22 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 20:04:08 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(){}
+CgiHandler::CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
+: cgi(cgi), script(script)
+{
+	this->constructEnv(cgi, method, contentType, contentLength, script);
+	this->createPipes();
+}
 
 CgiHandler::CgiHandler(const CgiHandler& other){}
 
 CgiHandler& CgiHandler::operator=(const CgiHandler& other){return (*this);}
 
-CgiHandler::~CgiHandler(){}
+CgiHandler::~CgiHandler()
+{
+	if (!this->info[EXECUTED])
+		this->closePipes();
+}
 /* End-Of Canonical Form */
 
-std::string	CgiHandler::handleCgi(std::string query, std::string script, std::string method, std::string addr, int client)
+void		CgiHandler::addBody(const std::string& body)
 {
-	t_pipes	pipes = createPipes();
-	int		pid = fork();
+	write (this->pipes.to_cgi[INPUT], body.c_str(), body.length());
+	this->info[BODY_SENT] = true;
+}
+
+std::string	CgiHandler::launch()
+{
+	if (this->info[EXECUTED])
+	{
+		Log(Log::ERROR) << "This CGI request has been already executed" << Log::endl();
+		return NULL;
+	}
+	if (!this->info[PIPES_OPENED])
+	{
+		Log(Log::ERROR) << "Pipes not opened, can't executed" << Log::endl();
+		return NULL;
+	}
+	if (this->info[AS_BODY] && !this->info[BODY_SENT])
+		Log(Log::ERROR) << "This request need body before executing" << Log::endl();
+
+	this->pid = fork();
 
 	if (pid < 0)
-		throw std::runtime_error("fork failed");
+	{
+		Log(Log::ERROR) << "Fork failed" << Log::endl();
+		return NULL;
+	}
 	if (pid == 0)
-		childProcess(pipes, query, script, method, addr);
-	else
-		return father(pipes);
+		this->childProcess();
+	return this->father();
 }
 
-t_pipes	CgiHandler::createPipes()
+void	CgiHandler::createPipes()
 {
-	t_pipes	pipes;
-
-	if (pipe(pipes.to_cgi) == -1 || pipe(pipes.from_cgi) == -1)
-		throw	std::runtime_error("Pipes error");
-	return (pipes);
+	if (pipe(this->pipes.to_cgi) == -1 || pipe(this->pipes.from_cgi) == -1)
+	{
+		Log(Log::ERROR) << "Pipes not opened" << Log::endl();
+		return;
+	}
+	this->info[PIPES_OPENED] = true;
 }
 
-void	CgiHandler::closePipes(t_pipes pipes)
+void	CgiHandler::constructEnv(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
 {
-	close(pipes.from_cgi[0]);
-	close(pipes.from_cgi[1]);
-	close(pipes.to_cgi[0]);
-	close(pipes.to_cgi[1]);
-}
-
-char**	CgiHandler::cgiSetEnv(std::string query, std::string script, std::string method, std::string addr)
-{
-	std::string	envStr[5] = {"REQUEST_METHOD=", "QUERY_STRING=", "SCRIPT_NAME=", "SERVER_PROTOCOL=HTTP/1.1", "REMOTE_ADDR="};
-
-	envStr[0].append(method);
-	envStr[1].append(query);
-	envStr[2].append(script);
-	envStr[4].append(addr);
-	for (int i = 0; i <=4; ++i)
-		putenv(const_cast<char*>(envStr[i].c_str()));
-}
-
-void	CgiHandler::childProcess(t_pipes pipes, std::string query, std::string script, std::string method, std::string addr)
-{
-	char* args[] = { const_cast<char*>(script.c_str()), NULL };
-    char* env[] = { NULL };
-
-	close(pipes.to_cgi[1]);
-	close(pipes.from_cgi[0]);
-
-	dup2(pipes.to_cgi[0], STDIN_FILENO);
-	dup2(pipes.from_cgi[1], STDOUT_FILENO);
-	close(pipes.to_cgi[0]);
-	close(pipes.from_cgi[1]);
-
-	cgiSetEnv(query, script, method, addr);
-
-	execve(script.c_str(), args, env);
+	if (contentLength.length() > 1)
+	{
+		this->envConstruct[CONTENT_LENGTH].append(contentLength);
+		this->envConstruct[CONTENT_TYPE].append(contentType);
+		this->info[AS_BODY] = true;
+	}
 	
-	throw	std::runtime_error("execve failed");
+	this->envConstruct[REQUEST_METHOD].append(method);
+	this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
+	this->envConstruct[SCRIPT_FILENAME].append(script);
+	this->envConstruct[SCRIPT_NAME].append(script);
+
+	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
+
+	for (int i = 0; i < ENV_SIZE; ++i)
+		this->env[i] = const_cast<char*>(this->envConstruct[i].c_str());
+	this->env[ENV_SIZE] = NULL;
 }
 
-std::string	CgiHandler::father(t_pipes pipes)
+void	CgiHandler::closePipes()
+{
+	close(this->pipes.from_cgi[OUTPUT]);
+	close(this->pipes.from_cgi[INPUT]);
+	close(this->pipes.to_cgi[OUTPUT]);
+	close(this->pipes.to_cgi[INPUT]);
+	this->info[PIPES_OPENED] = false;
+}
+
+void	CgiHandler::childProcess()
+{
+	char* args[] = {const_cast<char*>(this->script.c_str()), NULL};
+
+	close(pipes.to_cgi[INPUT]);
+	close(pipes.from_cgi[OUTPUT]);
+
+	dup2(pipes.to_cgi[OUTPUT], STDIN_FILENO);
+	dup2(pipes.from_cgi[INPUT], STDOUT_FILENO);
+	close(pipes.to_cgi[OUTPUT]);
+	close(pipes.from_cgi[INPUT]);
+
+	execve(this->cgi.c_str(), args, this->env);
+	
+	Log(Log::ERROR) << "Execve failed" << Log::endl();
+}
+
+std::string	CgiHandler::father()
 {
 	int status;
     char buffer[1024];
 	ssize_t bytes_read;
     std::string cgi_output;
 
-	close(pipes.to_cgi[0]);
-    close(pipes.from_cgi[1]);
+	close(pipes.to_cgi[OUTPUT]);
+    close(pipes.from_cgi[INPUT]);
 
     while ((bytes_read = read(pipes.from_cgi[0], buffer, sizeof(buffer) - 1)) > 0) 
 	{
         buffer[bytes_read] = '\0';
         cgi_output += buffer;
     }
-    close(pipes.from_cgi[0]);
-    close(pipes.to_cgi[1]);
+    close(pipes.from_cgi[OUTPUT]);
+    close(pipes.to_cgi[INPUT]);
+
+	this->info[EXECUTED] = true;
 
     waitpid(pid, &status, 0);
 
-    return cgi_output;
+	if (WIFEXITED(status)) 
+	{
+        if (WEXITSTATUS(status) != 0) 
+            Log(Log::ERROR) << "CGI script failed" << Log::endl();
+    }
+	else
+    	Log(Log::ERROR) << "CGI script terminated abnormally" << Log::endl();
+	return cgi_output;
 }

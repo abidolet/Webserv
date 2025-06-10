@@ -23,7 +23,17 @@
 # define B_WHITE	"\033[47m"
 
 #include <sstream>
+#include <stdint.h>
 #include <iostream>
+
+#define F_LOG		0b000001
+#define F_DEBUG		0b000010
+#define F_WARNING	0b000100
+#define F_SUCCESS	0b001000
+#define F_ERROR		0b010000
+#define F_ALERT		0b100000
+
+#define GET_VAR_NAME(name) #name
 
 class Log
 {
@@ -36,6 +46,7 @@ public:
 		LOG = 0,
 		DEBUG,
 		WARNING,
+		SUCCESS,
 		ERROR,
 		ALERT,
 	};
@@ -48,11 +59,17 @@ public:
 private:
 	std::ostringstream	m_oss;
 	Type				m_type;
+	static uint16_t		m_flags;
 
 public:
+
 	Log(Log::Type = Log::LOG);
 	void displayTimestamp(void);
 
+	static void setFlags(uint16_t flags);
+	static void enableFlags(uint16_t flags);
+	static void disableFlags(uint16_t flags);
+	static void toggleFlags(uint16_t flags);
 
 	template <typename T>
 	Log& operator<<(const T& value)
@@ -64,8 +81,37 @@ public:
 	template <>
 	Log& operator<<<Log::endl>(const Log::endl& value)
 	{
+
+		switch (m_type)
+		{
+			case LOG:
+				if (!(m_flags & F_LOG))
+					return *this;
+				break;
+			case DEBUG:
+				if (!(m_flags & F_DEBUG))
+					return *this;
+				break;
+			case WARNING:
+				if (!(m_flags & F_WARNING))
+					return *this;
+				break;
+			case SUCCESS:
+				if (!(m_flags & F_SUCCESS))
+					return *this;
+				break;
+			case ERROR:
+				if (!(m_flags & F_ERROR))
+					return *this;
+				break;
+			case ALERT:
+				if (!(m_flags & F_ALERT))
+					return *this;
+				break;
+		}
+
 		(void)value;
-		if (m_type == LOG || m_type == DEBUG)
+		if (m_type == LOG || m_type == DEBUG || m_type == SUCCESS)
 			std::cout << m_oss.str() << RESET << std::endl;
 		else
 			std::cerr << m_oss.str() << RESET << std::endl;

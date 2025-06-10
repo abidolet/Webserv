@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/05 13:45:04 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/06 20:01:18 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,86 @@
 #include <stdexcept>
 #include <cstring>
 #include <cstdlib>
-#include "unistd.h"
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include "Log.hpp"
+
+#define	INPUT					1
+#define OUTPUT					0
+
+#define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
+#define	DEFAULT_SERVER_ROOT		"/home/ygille/42/www/"
+
+#define ENV_SIZE				ENV_LAST_ELEM + 1
+#define	INFO_SIZE				INFO_LAST_ELEM + 1
+
+/*	example URL
+	http://example.com/cgi-bin/script.cgi/extra/path/file.txt?key=value&foo=bar
+
+	KEY						VALUE														PRECISION
+
+	REQUEST_METHOD		 	GET/POST
+	SCRIPT_NAME			 	/cgi-bin/script.cgi
+	PATH_INFO			 	/extra/path/file.txt
+	PATH_TRANSLATED		 	/var/www/html/extra/path/file.txt							DOCUMENT_ROOT + PATH_INFO
+	QUERY_STRING		 	key=value&foo=bar 											after ? in URL
+	CONTENT_TYPE		 	application/x-www-form-urlencoded
+	CONTENT_LENGTH		 	1024
+	REQUEST_URI=		 	/cgi-bin/script.cgi/extra/path/file.txt?key=value&foo=bar
+	SERVER_NAME			 	server.com
+	SERVER_PORT			 	8080
+	SERVER_PROTOCOL		 	HTTP/1.1
+	SERVER_SOFTWARE		 	webserv/418.0
+	DOCUMENT_ROOT		 	/var/www/html
+	REMOTE_ADDR			 	10.2.56.36
+	REMOTE_HOST			 	client.foo.fr
+	REMOTE_PORT			 	35255
+	HTTP_USER_AGENT		 	Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+	HTTP_ACCEPT			 	application/x-www-form-urlencoded
+	HTTPS				 	on/off
+	SERVER_ADDR			 	5.2.36.9
+	SCRIPT_FILENAME		 	/var/www/html/cgi-bin/script.cgi							DOCUMENT_ROOT + SCRIPT_NAME
+	REDIRECT_STATUS		 	200/CGI
+	GATEWAY_INTERFACE	 	CGI/1.1
+*/
+
+enum
+{
+	REQUEST_METHOD = 0,
+	SCRIPT_NAME,
+	PATH_INFO,
+	PATH_TRANSLATED,
+	QUERY_STRING,
+	CONTENT_TYPE,
+	CONTENT_LENGTH,
+	REQUEST_URI,	
+	SERVER_NAME,	
+	SERVER_PORT,	
+	SERVER_PROTOCOL,
+	SERVER_SOFTWARE,	
+	DOCUMENT_ROOT,
+	REMOTE_ADDR,
+	REMOTE_HOST,	
+	REMOTE_PORT,	
+	HTTP_USER_AGENT,
+	HTTP_ACCEPT,
+	HTTPS,
+	SERVER_ADDR,
+	SCRIPT_FILENAME,
+	REDIRECT_STATUS,
+	GATEWAY_INTERFACE,
+	ENV_LAST_ELEM = GATEWAY_INTERFACE
+};
+
+enum
+{
+	AS_BODY = 0,
+	BODY_SENT,
+	PIPES_OPENED,
+	EXECUTED,
+	INFO_LAST_ELEM = EXECUTED
+};
 
 typedef struct	s_pipes
 {
@@ -28,22 +107,56 @@ class	CgiHandler
 {
 public:
 
-	std::string	handleCgi(std::string query, std::string script, std::string method, std::string addr, int client);
+	CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script);
+	~CgiHandler();
+
+	void		addBody(const std::string& body);
+	std::string	launch();
 
 protected:
 
 private:
 
-	t_pipes		createPipes();
-	void		closePipes(t_pipes pipes);
-	char**		cgiSetEnv(std::string query, std::string script, std::string method, std::string addr);
-	void		childProcess(t_pipes pipes, std::string query, std::string script, std::string method, std::string addr);
-	std::string	father(t_pipes pipes);
+	std::string	envConstruct[ENV_SIZE] = {	"REQUEST_METHOD=",
+											"SCRIPT_NAME=",
+											"PATH_INFO=",
+											"PATH_TRANSLATED=",
+											"QUERY_STRING=",
+											"CONTENT_TYPE=",
+											"CONTENT_LENGTH=",
+											"REQUEST_URI=",	
+											"SERVER_NAME=",	
+											"SERVER_PORT=",	
+											"SERVER_PROTOCOL=",
+											"SERVER_SOFTWARE=",	
+											"DOCUMENT_ROOT=",
+											"REMOTE_ADDR=",
+											"REMOTE_HOST=",	
+											"REMOTE_PORT=",	
+											"HTTP_USER_AGENT=",
+											"HTTP_ACCEPT=",
+											"HTTPS=",
+											"SERVER_ADDR=",
+											"SCRIPT_FILENAME=",
+											"REDIRECT_STATUS=",
+											"GATEWAY_INTERFACE="};
+	char*		env[ENV_SIZE + 1];
 
-/* Canonical Form */
-CgiHandler();
-CgiHandler(const CgiHandler& other);
-CgiHandler& operator=(const CgiHandler& other);
-~CgiHandler();
-/* End-Of Canonical Form */
+	std::string	cgi;
+	std::string script;
+
+	bool		info[INFO_SIZE] = {false, false, false, false};
+
+	t_pipes		pipes;
+
+	int			pid;
+
+	void		createPipes();
+	void		constructEnv(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script);
+	void		closePipes();
+	void		childProcess();
+	std::string	father();
+
+	CgiHandler(const CgiHandler& other);
+	CgiHandler& operator=(const CgiHandler& other);
 };

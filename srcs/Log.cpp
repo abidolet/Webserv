@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <iostream>
 
+uint16_t Log::m_flags = F_LOG | F_DEBUG | F_WARNING | F_SUCCESS | F_ERROR | F_ALERT;
+
 void Log::displayTimestamp(void)
 {
     std::time_t time = std::time(NULL);
@@ -18,6 +20,29 @@ void Log::displayTimestamp(void)
 		<< std::setfill('0') << std::setw(2) << min << ":"
 		<< std::setfill('0') << std::setw(2) << s << "] ";
 }
+
+void Log::setFlags(uint16_t flags)
+{
+	m_flags = flags;
+}
+
+void Log::enableFlags(uint16_t flags)
+{
+	m_flags |= flags;
+}
+
+
+void Log::disableFlags(uint16_t flags)
+{
+	m_flags &= ~flags;
+}
+
+
+void Log::toggleFlags(uint16_t flags)
+{
+	m_flags ^= flags;
+}
+
 
 Log::Log(Log::Type type)
 {
@@ -38,8 +63,11 @@ Log::Log(Log::Type type)
 			m_oss << B_RED<< "[ALERT]    " << RESET;
 			break;
 		case DEBUG:
-			m_oss << PURPLE << "[DEBUG]   " << RESET;
+			m_oss << PURPLE << "[DEBUG]   " << GRAY;
 			break;
+		case SUCCESS:
+			m_oss << GREEN << "[SUCCESS] " << RESET;
+
 	}
 }
 

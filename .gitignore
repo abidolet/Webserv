@@ -2,9 +2,14 @@
 !conf
 !includes
 !srcs
+!srcs/*
 !Makefile
 !*.hpp
 !*.cpp
 !*.tpp
 !*.conf
+!www
 !*.html
+!*.php
+!test
+!*_tester!*.html

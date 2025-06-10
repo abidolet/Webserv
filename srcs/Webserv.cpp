@@ -29,7 +29,11 @@ Webserv::Webserv()
 Webserv::Webserv(const std::string& file)
 	: _servers(), _epoll_fd(-1), _listener_fd(-1)
 {
-	Parser	parser(file);
+	Parser parser(file);
+	parser.populateServerInfos();
+
+	Server default_server;
+	_servers.push_back(default_server);
 }
 
 Webserv::~Webserv()

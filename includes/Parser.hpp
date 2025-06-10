@@ -4,18 +4,22 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <exception>
 
 struct Server;
 
 #define DEFAULT_CONF_PATH "./conf/default.conf"
 
-struct Block
+class Block
 {
-	std::string block_name;
-	std::vector<std::string>::iterator begin_it; 
-	std::vector<std::string>::iterator end_it; 
+public:
+	Block(std::string name) : block_name(name) {}
 
-	std::vector<Block> inners;
+
+	std::string block_name;
+
+	std::vector<std::string>	content;
+	std::vector<Block>			inners;
 };
 
 class Parser
@@ -24,17 +28,39 @@ public:
 	Parser(const std::string& filepath);
 	~Parser() {};
 
+	Server	populateServerInfos();
 
-	void	loadBlock();
+private:
+	Block	loadBlock(std::vector<std::string>::iterator& it, std::string name);
+	void	parseBlock();
 	void	loadFile();
 
 private:
 	std::vector<std::string>	m_file;
-	Block			m_block;
+	Block						m_block;
+	std::ifstream				m_stream;	
+	std::string					m_filepath;
+	std::string					default_config_path;
 
-	std::ifstream m_stream;	
 
-	std::string default_config_path;
+public:
+	class InvalidArgumentException : public std::exception
+	{
+	private:
+		std::string m_wrong;
+		std::string m_right;
+
+	public:
+		const char* what() const throw() 
+		{
+			static std::string error = "invalid identifier: " + m_wrong + "'; did you mean: `" + m_right + "' ?"; 
+			return error.c_str();
+		}
+
+		virtual ~InvalidArgumentException() throw() {}
+		InvalidArgumentException(std::string wrong, std::string right) : m_wrong(wrong), m_right(right) {}
+
+	};
 };
 
 #endif // !PARSER_HPP

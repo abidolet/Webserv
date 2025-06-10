@@ -11,12 +11,13 @@ ifeq ($(MODE), debug)
 	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -g3 -std=c++98
 endif
 
-VPATH = srcs
+VPATH = srcs:srcs/parser
 
-SRCS =	main.cpp	\
-		Webserv.cpp	\
-		Parser.cpp	\
-		Log.cpp		\
+SRCS =	main.cpp		\
+		Webserv.cpp		\
+		Parser.cpp		\
+		Log.cpp			\
+		ParserTools.cpp	\
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 DEPS = $(OBJS:.o=.d)
@@ -35,7 +36,7 @@ all:
 
 debug:
 	$(MAKE) MODE=debug all
-	./webserv
+	./webserv ./conf/default.conf
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
