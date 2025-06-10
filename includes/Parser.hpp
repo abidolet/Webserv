@@ -49,7 +49,7 @@ public:
 	public:
 		const char* what() const throw()
 		{
-			static std::string error = "invalid identifier: " + m_wrong + "'; did you mean: `" + m_right + "' ?";
+			static std::string error = "invalid identifier: `" + m_wrong + "'; did you mean: `" + m_right + "' ?";
 			return error.c_str();
 		}
 
@@ -76,6 +76,23 @@ public:
 	private:
 		std::string m_directive;
 		std::string m_line;
+	};
+
+	class TooMuchDirectiveException : public std::exception
+	{
+	public:
+		const char* what() const throw()
+		{
+			static std::string error = "too much `" + m_directive + "' directive in `" + m_block.block_name + "'";
+			return error.c_str();
+		}
+
+		virtual ~TooMuchDirectiveException() throw() {}
+		TooMuchDirectiveException(std::string directive, Block block) : m_directive(directive), m_block(block) {}
+
+	private:
+		std::string m_directive;
+		Block m_block;
 	};
 };
 

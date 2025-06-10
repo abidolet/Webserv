@@ -23,34 +23,24 @@ struct	Location
 	std::string					index;
 	std::string					cgi_pass;
 	std::vector<std::string>	cgi_extensions;
-	bool						autoindex;
-	std::vector<std::string>	allowed_methods;
 };
 
 struct	Server
 {
 	Server() // TODO: penser a recheck les valeur
-		: server_name("localhost"), client_max_body_size(0), is_default(true)
+		: server_name("localhost"), client_max_body_size(0)
 	{
 		listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
 	}
 
-
-
-
 	std::string					server_name;
-	
 	size_t						client_max_body_size;
 
 	std::vector<std::string>	allowed_methods;
-	std::map<int, std::string>	error_pages;
-	std::map<std::string, int>	listen;
-
 	std::vector<Location>		locations;
 
-	bool						is_default;
-
-	std::map<int, std::string>	redirections;
+	std::map<int, std::string>	error_pages;
+	std::map<std::string, int>	listen;
 };
 
 class	Webserv
