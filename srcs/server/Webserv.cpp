@@ -80,7 +80,7 @@ std::string handleGetRequest(std::string& path)
 {
 	if (path.empty() || path == "/")
 	{
-		path = "index.html";
+		path = "www/test.html";
 	}
 	if (path[0] == '/')
 	{
@@ -88,7 +88,7 @@ std::string handleGetRequest(std::string& path)
 	}
 	if (!path.empty() && path[path.size() - 1] == '/')
 	{
-		path += "index.html";
+		path += "www/test.html";
 	}
 
 	Log() << "Access to: " << path << Log::endl();
@@ -102,7 +102,7 @@ std::string handleGetRequest(std::string& path)
 
 	if (S_ISDIR(statbuf.st_mode))
 	{
-		path += "/index.html";
+		path += "/www/test.html";
 		if (stat(path.c_str(), &statbuf) != 0)
 		{
 			return ("HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");

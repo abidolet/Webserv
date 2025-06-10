@@ -11,7 +11,7 @@ ifeq ($(MODE), debug)
 	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -g3 -std=c++98
 endif
 
-VPATH = srcs:srcs/parser
+VPATH = srcs:srcs/parser:srcs/server:srcs/cgi
 
 SRCS =	main.cpp		\
 		Webserv.cpp		\
