@@ -46,20 +46,36 @@ private:
 public:
 	class InvalidArgumentException : public std::exception
 	{
-	private:
-		std::string m_wrong;
-		std::string m_right;
-
 	public:
-		const char* what() const throw() 
+		const char* what() const throw()
 		{
-			static std::string error = "invalid identifier: " + m_wrong + "'; did you mean: `" + m_right + "' ?"; 
+			static std::string error = "invalid identifier: " + m_wrong + "'; did you mean: `" + m_right + "' ?";
 			return error.c_str();
 		}
 
 		virtual ~InvalidArgumentException() throw() {}
 		InvalidArgumentException(std::string wrong, std::string right) : m_wrong(wrong), m_right(right) {}
 
+	private:
+		std::string m_wrong;
+		std::string m_right;
+	};
+
+	class InvalidDirectiveException : public std::exception
+	{
+	public:
+		const char* what() const throw()
+		{
+			static std::string error = "invalid `" + m_directive + "' directive; `" + m_line + "'";
+			return error.c_str();
+		}
+
+		virtual ~InvalidDirectiveException() throw() {}
+		InvalidDirectiveException(std::string directive, std::string line) : m_directive(directive), m_line(line) {}
+
+	private:
+		std::string m_directive;
+		std::string m_line;
 	};
 };
 

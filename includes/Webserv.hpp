@@ -30,24 +30,21 @@ struct	Location
 struct	Server
 {
 	Server() // TODO: penser a recheck les valeur
-		: port(8080), host("0.0.0.0"), server_name("localhost"), client_max_body_size(100), is_default(true), redirections()
+		: server_name("localhost"), client_max_body_size(0), is_default(true)
 	{
-			// redirections.insert(std::pair<int, std::string>(404, "/error/404.html"));
-			// redirections.insert(std::pair<int, std::string>(403, "/error/page_error.html"));
-			// redirections.insert(std::pair<int, std::string>(401, "/error/page_error.html"));
-			// redirections.insert(std::pair<int, std::string>(406, "/error/page_error.html"));
-			// redirections.insert(std::pair<int, std::string>(418, "/error/teapot.html"));
+		listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
 	}
 
 
 
-	int							port;
-	std::string					host;
+
 	std::string					server_name;
 	
 	size_t						client_max_body_size;
-	std::vector<std::string>	allowed_methodes;
+
+	std::vector<std::string>	allowed_methods;
 	std::map<int, std::string>	error_pages;
+	std::map<std::string, int>	listen;
 
 	std::vector<Location>		locations;
 

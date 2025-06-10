@@ -4,6 +4,7 @@
 #include "ParserTools.hpp"
 
 #include <cstdlib>
+#include <list>
 
 void print_block(Block block, int depth)
 {
@@ -21,7 +22,6 @@ void print_block(Block block, int depth)
 		std::cout << std::endl;
 		print_block(block.inners[i], depth + 1);
 	}
-	
 }
 
 Parser::Parser(const std::string& filepath)
@@ -41,8 +41,6 @@ void Parser::parseBlock()
 	std::vector<std::string>::iterator it = m_file.begin();
 	m_block = loadBlock(it, "root");
 }
-
-
 
 Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string name)
 {
@@ -75,8 +73,6 @@ Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string name
 	return block;
 }
 
-
-
 bool blockAssert(std::vector<Block> blocks, std::vector<std::string> shouldBeFound, std::string blockName)
 {
 	std::vector<Block>::iterator block = blocks.begin();
@@ -108,65 +104,30 @@ bool blockAssert(std::vector<Block> blocks, std::vector<std::string> shouldBeFou
 	return true;
 }
 
-template <typename T>
-T fillEntry(T* entry, std::string keyword, Block block)
+std::vector<std::string> getEntries(Block block, const std::string& keyword)
 {
-	T result;
-	std::stringstream ss;
+	std::vector<std::string> results;
+	std::string firstWord;
 
 	std::vector<std::string>::iterator it = block.content.begin();
-	std::string	firstWord;
 	while (it != block.content.end())
 	{
 		firstWord = it->substr(0, it->find(" "));
-
 		if (firstWord == keyword)
 		{
-			ss << it->substr(it->find(" ") + 1, it->size() - it->find(" ") + 1);
-			ss >> result;
-		
-			*entry = result;
-			return result;
+			results.push_back(it->substr(it->find(" ") + 1, it->size() - it->find(" ") + 1));
 		}
-
-		it++;
+		++it;
 	}
-	return *entry;
-}
-
-// ss >> result will output each string until whitespace, so it's a bit different for a string
-template <>
-std::string fillEntry<std::string>(std::string* entry, std::string keyword, Block block)
-{
-	std::string result;
-	std::stringstream ss;
-
-	std::vector<std::string>::iterator it = block.content.begin();
-	std::string	firstWord;
-	while (it != block.content.end())
-	{
-		firstWord = it->substr(0, it->find(" "));
-
-		if (firstWord == keyword)
-		{
-			ss << it->substr(it->find(" ") + 1, it->size() - it->find(" ") + 1);
-			*entry = ss.str();
-			return *entry;
-		}
-
-		it++;
-	}
-	return *entry;
+	return results;
 }
 
 void printServConfig(Server serv)
 {
 	Log(Log::DEBUG) << "server config:" << Log::endl();
 	Log(Log::DEBUG) << "\t|-> server_name:" << serv.server_name << Log::endl();
-	Log(Log::DEBUG) << "\t|-> host:" << serv.host << Log::endl();
-	Log(Log::DEBUG) << "\t|-> port:" << serv.port << Log::endl();
 	Log(Log::DEBUG) << "\t|-> client_max_body_size:" << serv.client_max_body_size << Log::endl();
-	Log(Log::DEBUG) << "\t|-> allowed methodes:" << Tools::strUnite(serv.allowed_methodes, ",") << Log::endl();
+	Log(Log::DEBUG) << "\t|-> allowed methods:" << Tools::strUnite(serv.allowed_methods, ",") << Log::endl();
 	Log(Log::DEBUG) << "\t|-> is_default:" << serv.is_default << Log::endl();
 
 	// printing redirections
@@ -177,6 +138,17 @@ void printServConfig(Server serv)
 		{
 			Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();
 			it++;
+		}
+	}
+
+	// printing listens
+	{
+		Log(Log::DEBUG) << "\t|->" << serv.listen.size() << "listens" << Log::endl();
+		std::map<std::string, int>::iterator it = serv.listen.begin();
+		while (it != serv.listen.end())
+		{
+			Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();
+			++it;
 		}
 	}
 
@@ -210,7 +182,7 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 	{
 		Location tmp;
 
-		fillEntry(&tmp.path, "path", *it);
+		// fillEntry(&tmp.path, "path", *it);
 
 		locations.push_back(tmp);
 		it++;
@@ -218,29 +190,53 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 	return locations;
 }
 
-void	setupHostPort(Server& serv, Block block)
+void	setupListen(Server& serv, const Block &block)
 {
-	std::string listen = "0.0.0.0:8080";
-	fillEntry(&listen, "listen", block);
-	std::vector<std::string> split = Tools::strsplit(listen, ':');
-	if (split.size() > 2)
-		throw std::runtime_error("invalid expression: `" + listen + "'");
-	if (split.size() == 1)
-		serv.port = std::atoi(split[0].c_str());
-	else
+	std::map<std::string, int>	result;
+
+	std::vector<std::string> found = getEntries(block, "listen");
+	if (found.empty())
+		return;
+
+	std::vector<std::string>::iterator it = found.begin();
+	for ( ; it != found.end(); ++it)
 	{
-		serv.host = split[0];	
-		serv.port = std::atoi(split[1].c_str());
+		char *endl;
+		int port;
+
+		std::vector<std::string> split = Tools::strsplit(*it, ':');
+		if (split.size() == 1)
+		{
+			port = std::strtol(split[0].c_str(), &endl, 10);
+			if (endl[0] != '\0')
+				throw Parser::InvalidDirectiveException("listen", *it);
+			result.insert(std::pair<std::string, int>("0.0.0.0", port));
+		}
+		else
+		{
+			if (split.empty() || split.size() > 2)
+				throw Parser::InvalidDirectiveException("listen", *it);
+
+			port = std::strtol(split[1].c_str(), &endl, 10);
+			if (endl[0] != '\0')
+				throw Parser::InvalidDirectiveException("listen", *it);
+
+			result.insert(std::pair<std::string, int>(split[0], port));
+		}
+
 	}
-	if (serv.port < 0)
-		throw std::runtime_error("invalid expression: `" + listen + "'");
+	serv.listen = result;
 }
 
-void setupMaxBodySize(Server& serv, Block block)
+void setupMaxBodySize(Server& serv, const Block& block)
 {
-	std::string max_size = "0";
+	std::vector<std::string> found = getEntries(block, "client_max_body_size");
+	if (found.empty())
+		return;
+
 	char* end;
-	fillEntry(&max_size, "client_max_body_size", block); 
+	std::string max_size = found[0];
+
 	float tmp = std::strtod(max_size.c_str(), &end);
 	if (tmp < 0)
 		throw std::runtime_error("invalid client_max_body_size: `" + max_size + "'");
@@ -255,16 +251,19 @@ void setupMaxBodySize(Server& serv, Block block)
 		serv.client_max_body_size = tmp;
 }
 
-void setupAllowedMethodes(Server& serv, Block block)
+void setupAllowedMethods(Server& serv, const Block& block)
 {
-	std::string allowedMethodes = "POST GET DELETE";
-	fillEntry(&allowedMethodes, "allowed_methodes", block);
-	serv.allowed_methodes = Tools::strsplit(allowedMethodes, ' ');
+	std::vector<std::string> found = getEntries(block, "allowed_methods");
+	if (found.empty())
+		return;
+
+	std::string allowedMethods = found[0];
+	serv.allowed_methods = Tools::strsplit(allowedMethods, ' ');
 
 	// check if entry is correct
 	const std::string avaibleStrs[3] = {"POST", "GET", "DELETE"};
-	std::vector<std::string>::iterator it = serv.allowed_methodes.begin();
-	while (it != serv.allowed_methodes.end())
+	std::vector<std::string>::iterator it = serv.allowed_methods.begin();
+	while (it != serv.allowed_methods.end())
 	{
 		int i = 0;
 		for ( ; i < 3; i++)
@@ -278,14 +277,13 @@ void setupAllowedMethodes(Server& serv, Block block)
 	}
 }
 
-void setupRedirections(Server& serv, Block block)
+void setupRedirections(Server& serv, const Block& block)
 {
-	std::string str = "none";
-	fillEntry(&str, "error_page", block);
-	
-	if (str == "none")
-		return ;
+	std::vector<std::string> found = getEntries(block, "error_page");
+	if (found.empty())
+		return;
 
+	std::string str = found[0]; //TODO: ne support que une seule redirection
 	std::vector<std::string> redirs = Tools::strsplit(str, ' ');
 	if (redirs.size() <= 1)
 		throw std::runtime_error("invalid directive: `error_page'");
@@ -312,7 +310,7 @@ void setupRedirections(Server& serv, Block block)
 Server Parser::populateServerInfos()
 {
 	Server serv;
-	const std::string serverOption[] = {"listen", "host", "server_name", "return", "client_max_body_size", "allowed_methodes", "error_page"};
+	const std::string serverOption[] = {"listen", "host", "server_name", "return", "client_max_body_size", "allowed_methods", "error_page"};
 
 	blockAssert(m_block.inners, std::vector<std::string>(serverOption, serverOption + 7), "server"); 
 	Log(Log::SUCCESS) << "server block is good" << Log::endl();
@@ -323,10 +321,10 @@ Server Parser::populateServerInfos()
 	//
 	while (it != m_block.inners.end())
 	{
-		fillEntry(&serv.server_name, "server_name", *it);
-		setupHostPort(serv, *it);
+		serv.server_name = getEntries(*it, "server_name")[0];
+		setupListen(serv, *it);
 		setupMaxBodySize(serv, *it);
-		setupAllowedMethodes(serv, *it);
+		setupAllowedMethods(serv, *it);
 		setupRedirections(serv, *it);
 
 		serv.locations = populateLocationInfos(*it);
@@ -345,7 +343,7 @@ Server Parser::populateServerInfos()
 // [x] host
 // [x] port
 // [x] client_max_body_size
-// [x] allowed_methodes
+// [x] allowed_methods
 // [ ] redirection
 // [~] location
 // [ ]  | path
