@@ -1,20 +1,30 @@
 #ifndef WEBSERV_HPP
 # define WEBSERV_HPP
 
-#include <iostream>
-#include <vector>
-#include <map>
+# include <iostream>
+# include <vector>
+# include <map>
 
-struct Location
+struct	HttpRequest
+{
+	std::string							method;
+	std::string							body;
+	std::string							path;
+	std::map<std::string, std::string>	headers;
+};
+
+struct	Location
 {
 	std::string					path;
 	std::string					root;
 	std::string					redirect;
 	std::string					cgi_pass;
 	std::vector<std::string>	cgi_extensions;
+	bool						autoindex;
+	std::vector<std::string>	allowed_methods;
 };
 
-struct Server
+struct	Server
 {
 	int							port;
 	std::string					host;
@@ -26,13 +36,18 @@ struct Server
 	int							fd;
 };
 
-class Webserv
+class	Webserv
 {
 	private:
 		std::vector<Server>	_servers;
 
 		int					_epoll_fd;
 		int					_listener_fd;
+
+		// HttpRequest	parseRequest(const std::string& rawRequest);
+		// std::string	handleGetRequest(const std::string& request);
+		// std::string	handlePostRequest(void);
+		// std::string	handleDeleteRequest(const std::string& request);
 
 	public:
 		Webserv();
