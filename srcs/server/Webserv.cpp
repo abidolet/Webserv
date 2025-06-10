@@ -94,7 +94,7 @@ std::string handleGetRequest(std::string& path)
 	struct stat	statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
-		Log(Log::ERROR) << "File not found: " << path << Log::endl();
+		Log(Log::ERROR) << "File not found:" << path << Log::endl();
 		return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");
 	}
 
@@ -192,7 +192,7 @@ void Webserv::run()
 	struct sockaddr_in	server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = INADDR_ANY;
-//	server_addr.sin_port = htons(_servers[0].port);
+	server_addr.sin_port = htons(_servers[0].listen.begin()->second);
 
 	if (bind(_listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
 	{
