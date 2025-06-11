@@ -1,6 +1,7 @@
 #include "ParserTools.hpp"
 #include <cmath>
 #include "fstream"
+#include <iostream>
 
 namespace Tools
 {
@@ -177,5 +178,12 @@ namespace Tools
 			it++;
 		}
 		return true;
+	}
+
+	bool fileAccess(const std::string& path)
+	{
+		std::ifstream stream;
+		stream.open(path.c_str());
+		return !stream.fail();
 	}
 }

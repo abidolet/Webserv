@@ -17,13 +17,8 @@ struct	HttpRequest
 
 struct	Location
 {
-#if old
 	Location()
-		: path("/var/www/html"), root("/"), index("index.html"), cgi_pass("TODO"), cgi_extensions(std::vector<std::string>(1, "TODO")) {}
-#endif
-
-	Location()
-	: path("/var/www/html"), root("/"), index("index.html"), cgi_pass("TODO"), cgi_extension("TODO") {}
+		: path("/var/www/html"), root("/"), index("index.html") { }
 
 		std::string		path;
 		std::string		root;

@@ -18,4 +18,6 @@ namespace Tools
 	bool is_number(std::vector<std::string> strs);
 	bool is_number(std::string str);
 
+	bool fileAccess(const std::string& path);
+
 }

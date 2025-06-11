@@ -30,6 +30,11 @@ int main (int argc, char *argv[])
 	signal(SIGTERM, handle_signal);
 
 	std::string	file;
+
+#if LOGFILE
+	Log::setupLogFile();
+#endif
+
 	if (argc == 1)
 	{
 		file = DEFAULT_CONF_PATH;

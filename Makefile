@@ -5,10 +5,10 @@ OBJ_DIR = obj-$(MODE)
 INCLUDES = -Iincludes
 
 CXX = g++
-CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -std=c++98
+CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D COLORS -std=c++98
 
 ifeq ($(MODE), debug)
-	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -g3 -std=c++98
+	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D COLORS -g3 -std=c++98
 endif
 
 VPATH = srcs:srcs/parser:srcs/server:srcs/cgi

@@ -45,18 +45,16 @@ void Parser::parseBlock()
 Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string _name)
 {
 	Block block(_name);
-	while (it != m_file.end())
+	for ( ; it != m_file.end(); ++it)
 	{
 		if (it->find("{") != (size_t)-1)
 		{
-			Log(Log::DEBUG) << *it << Log::endl();
 			std::string name = Tools::strtrim(*it, " \t{");
 			++it;
 			block.inners.push_back(loadBlock(it, name));
 		}
 		else if (it->find("}") != (size_t)-1)
 		{
-			Log(Log::DEBUG) << *it << Log::endl();
 			return block;
 		}
 		else
@@ -65,9 +63,7 @@ Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string _nam
 				throw std::runtime_error("missing `{' on line `" + *it + "'");
 			if (Tools::should_add_line(*it))
 				block.directives.push_back(Tools::strtrim(*it, " \t"));
-			Log(Log::DEBUG) << *it << Log::endl();
 		}
-		it++;
 	}
 	if (block.block_name != "root")
 		throw std::runtime_error("missing `}'");
@@ -85,10 +81,9 @@ void printServConfig(Server serv)
 	{
 		Log(Log::DEBUG) << "\t|->" << serv.error_pages.size() << "error_pages" << Log::endl();
 		std::map<int, std::string>::iterator it = serv.error_pages.begin();
-		while (it != serv.error_pages.end())
+		for ( ; it != serv.error_pages.end(); ++it)
 		{
 			Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();
-			it++;
 		}
 	}
 
@@ -96,10 +91,9 @@ void printServConfig(Server serv)
 	{
 		Log(Log::DEBUG) << "\t|->" << serv.listen.size() << "listens" << Log::endl();
 		std::map<std::string, int>::iterator it = serv.listen.begin();
-		while (it != serv.listen.end())
+		for ( ; it != serv.listen.end(); ++it)
 		{
 			Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();
-			++it;
 		}
 	}
 
@@ -108,17 +102,15 @@ void printServConfig(Server serv)
 		Log(Log::DEBUG) << "\t|" << Log::endl();
 		Log(Log::DEBUG) << "\t|->" << serv.locations.size() << "locations" << Log::endl();
 		std::vector<Location>::iterator it = serv.locations.begin();
-		while (it != serv.locations.end())
+		for ( ; it != serv.locations.end(); ++it)
 		{
 			Log(Log::DEBUG) << "\t|---- locations:" << it->root << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> path:" << it->path << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
 
-			Log(Log::DEBUG) << "\t|\t|-> cgi pass:" << it->cgi_pass << Log::endl();
-			Log(Log::DEBUG) << "\t|\t|-> cgi extension:" << it->cgi_extension << Log::endl();
-
-			it++;
+			Log(Log::DEBUG) << "\t|\t|-> cgi pass: [" << it->cgi_pass << "]" << Log::endl();
+			Log(Log::DEBUG) << "\t|\t|-> cgi extension: [" << it->cgi_extension << "]" << Log::endl();
 		}
 	}
 }
@@ -131,47 +123,67 @@ void setupLocationPath(Location& location, Block& block)
 		throw std::runtime_error("`path' directive must be an absolute path");
 }
 
+void setupLocationRoot(Location& location, const Block& block)
+{
+	std::vector<std::string> split = Tools::strsplit(block.block_name, ' ');
+	if (split.size() == 1)
+		throw Parser::InvalidDirectiveException("location", block.block_name);
+
+	location.root = split[1];
+	if (split[1] == "~") // for cgi
+	{
+		Log() << "found cgi location block" << Log::endl();
+		if (split.size() != 3)
+			throw std::runtime_error("invalid option in `" + block.block_name + "'");
+
+		const std::string options[] = {".php"};
+		for (size_t i = 0; i < options->size(); i++)
+		{
+			if (split[2] == options[i])
+			{
+				Log(Log::SUCCESS) << "cgi extension found:" << options[i] << Log::endl();
+				location.cgi_extension = options[i];
+				break;
+			}
+			if (location.cgi_extension.empty())
+				throw Parser::InvalidArgumentException(split[2], Tools::findClosest(split[2], std::vector<std::string>(options, options + 1)));
+		}
+		location.root = split[2];
+	}
+}
+
 std::vector<Location> populateLocationInfos(Block serv_block)
 {
 	std::vector<Location> locations;
 
-	const std::string locationOptions[] = {"index", "path"};
-	serv_block.blockAssert(std::vector<std::string>(locationOptions, locationOptions + 2), "location");
+	const std::string locationOptions[] = {"index", "path", "allowed_methods", "cgi_pass"};
+	serv_block.blockAssert(std::vector<std::string>(locationOptions, locationOptions + 4), "location");
 
 	std::vector<Block>::iterator it = serv_block.inners.begin();
-	while (it != serv_block.inners.end())
+	for ( ; it != serv_block.inners.end(); ++it)
 	{
 		Location tmp;
 
-		// root
-		std::vector<std::string> split = Tools::strsplit(it->block_name, ' ');
-		if (split.size() == 1)
-			throw Parser::InvalidDirectiveException("location", it->block_name);
-
-		tmp.root = split[1];
-		if (split[1] == "~") // for cgi
-		{
-			Log() << "found cgi location block" << Log::endl();
-			if (split.size() != 3)
-				throw std::runtime_error("invalid option in `" + it->block_name + "'");
-			if (split[2] == ".php")
-			{
-				Log() << "found cgi type: `php'";
-				// tmp.type = PHP;
-			}
-			else
-				throw Parser::InvalidArgumentException(split[1], ".php");
-			tmp.root = split[2];
-		}
-		// ---
-
+		setupLocationRoot(tmp, *it);
 		setupLocationPath(tmp, *it);
 		it->loadSingleDirective("index", tmp.index);
+		it->loadSingleDirective("cgi_pass", tmp.cgi_pass);
+
+		if (!tmp.cgi_pass.empty() && Tools::fileAccess(tmp.cgi_pass) == false)
+			throw std::runtime_error("cannot open cgi pass: `" + tmp.cgi_pass + "'");
+
+		//? check that cgi_extension and cgi_pass are BOTH empty or filled
+		if (!tmp.cgi_extension.empty() != !tmp.cgi_pass.empty())
+			throw std::runtime_error("cannot have only one cgi directive; " + it->block_name);
 
 		locations.push_back(tmp);
-		++it;
 	}
 	return locations;
+}
+
+void assertListen(const std::string& listen)
+{
+	(void)listen;
 }
 
 // TODO check for format error in the listen directive (e.g: az.by.cvwc.fg323:3243233)
@@ -189,6 +201,7 @@ void	setupListen(Server& serv, Block &block)
 		char *endl;
 		int port;
 
+		assertListen(*it);
 		std::vector<std::string> split = Tools::strsplit(*it, ':');
 		if (split.size() == 1)
 		{
@@ -242,7 +255,7 @@ void setupAllowedMethods(Server& serv, Block& block)
 	if (found.empty())
 		return;
 
-	std::string allowedMethods = found[0];
+	std::string& allowedMethods = found[0];
 	serv.allowed_methods = Tools::strsplit(allowedMethods, ' ');
 
 	// check if entry is correct
@@ -325,20 +338,6 @@ Server Parser::populateServerInfos()
 	return serv;
 }
 
-//TODO parsing
-// [x] servername 
-// [x] host
-// [x] port
-// [x] client_max_body_size
-// [x] allowed_methods
-// [x] redirection
-// [~] location
-// [x]  | path
-// [x]  | root
-// [x]  | index
-// [ ]  | cgi pass
-// [ ]  | cgi extension
-//
 
 //TODO check le parsing:
 // [ ] mettre des blocs sans le `{'

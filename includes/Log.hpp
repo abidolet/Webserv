@@ -1,6 +1,7 @@
 #ifndef LOG_HPP
 # define LOG_HPP
 
+# ifdef  COLORS
 # define RESET		"\033[0m"
 # define BLACK		"\033[0;30m"
 # define RED		"\033[0;31m"
@@ -22,9 +23,33 @@
 # define B_CYAN		"\033[46m"
 # define B_WHITE	"\033[47m"
 
+#else
+
+# define RESET		""
+# define BLACK		""
+# define RED		""
+# define GREEN		""
+# define YELLOW		""
+# define BLUE		""
+# define PURPLE		""
+# define CYAN		""
+# define WHITE		""
+# define GRAY		""
+# define BOLD		""
+
+# define B_BLACK	""
+# define B_RED		""
+# define B_GREEN	""
+# define B_YELLOW	""
+# define B_BLUE		""
+# define B_PURPLE	""
+# define B_CYAN		""
+# define B_WHITE	""
+
+#endif
+
 #include <sstream>
 #include <stdint.h>
-#include <iostream>
 
 #define F_LOG		0b000001
 #define F_DEBUG		0b000010
@@ -32,6 +57,7 @@
 #define F_SUCCESS	0b001000
 #define F_ERROR		0b010000
 #define F_ALERT		0b100000
+
 
 #define GET_VAR_NAME(name) #name
 
@@ -58,19 +84,21 @@ public:
 	};
 
 private:
-	std::ostringstream	m_oss;
-	Type				m_type;
-	static uint16_t		m_flags;
+	std::ostringstream		m_oss;
+	Type					m_type;
+	static uint16_t			m_flags;
+	static std::ofstream	m_logFile;
 
 public:
 
 	Log(Log::Type = Log::LOG);
-	void displayTimestamp(void);
+	void displayTimestamp();
 
 	static void setFlags(uint16_t flags);
 	static void enableFlags(uint16_t flags);
 	static void disableFlags(uint16_t flags);
 	static void toggleFlags(uint16_t flags);
+	static void setupLogFile();
 
 	template <typename T>
 	Log& operator<<(const T& value)
@@ -79,6 +107,8 @@ public:
 		return *this;
 	}
 
+private:
+	static std::string printCol(const std::string& col);
 };
 std::ostream& operator<<(std::ostream &stream, const Log::endl endl);
 
