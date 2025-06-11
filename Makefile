@@ -19,6 +19,7 @@ SRCS =	main.cpp		\
 		Log.cpp			\
 		ParserTools.cpp	\
 		Block.cpp		\
+		CgiHandler.cpp	\
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 DEPS = $(OBJS:.o=.d)

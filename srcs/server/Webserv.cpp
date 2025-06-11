@@ -16,22 +16,11 @@
 #define MAX_EVENTS 1024
 #define CLOSE(fd) if (fd > 1) close(fd)
 
-Webserv::Webserv()
-	: _servers(), _epoll_fd(-1), _listener_fd(-1)
-{
-	Server	default_server;
-
-	_servers.push_back(default_server);
-}
-
 Webserv::Webserv(const std::string& file)
 	: _servers(), _epoll_fd(-1), _listener_fd(-1)
 {
-	Parser parser(file);
-	parser.populateServerInfos();
-
-	Server default_server;
-	_servers.push_back(default_server);
+	Parser	parser(file);
+	_servers.push_back(parser.populateServerInfos());
 }
 
 Webserv::~Webserv()
@@ -48,37 +37,43 @@ HttpRequest	parseRequest(const std::string& rawRequest)
 
 	if (std::getline(stream, line))
 	{
-		std::istringstream request_line(line);
+		std::istringstream	request_line(line);
 		request_line >> request.method >> request.path;
 	}
 
 	size_t		pos;
 	std::string	key;
 	std::string	value;
-	while (std::getline(stream, line) && !line.empty())
+	while (std::getline(stream, line) && line != "\r")
 	{
 		pos = line.find(':');
 		if (pos != std::string::npos)
 		{
-			key = line.substr(0, pos);
-			value = line.substr(pos + 1);
+			size_t	start = value.find_first_not_of(" \t\r\n");
+			if (start != std::string::npos)
+			{
+				size_t	end = value.find_last_not_of(" \t\r\n");
+				value = value.substr(start, end - start + 1);
+			}
 			request.headers[key] = value;
 		}
 	}
 
-	if (std::getline(stream, line))
+	size_t	body_pos = rawRequest.find("\r\n\r\n");
+	if (body_pos != std::string::npos)
 	{
-		request.body = line;
+		request.body = rawRequest.substr(body_pos + 4);
 	}
-
 	return (request);
 }
 
-std::string handleGetRequest(std::string& path)
+std::string	handleGetRequest(std::string& path)
 {
+	Log() << "Get request for: " << path << Log::endl();
+
 	if (path.empty() || path == "/")
 	{
-		path = "www/test.html";
+		path = "www/index.html";
 	}
 	if (path[0] == '/')
 	{
@@ -86,23 +81,24 @@ std::string handleGetRequest(std::string& path)
 	}
 	if (!path.empty() && path[path.size() - 1] == '/')
 	{
-		path += "www/test.html";
+		path += "www/index.html";
 	}
 
-	Log() << "Access to: " << path << Log::endl();
+	Log() << "Trying to access to: " << path << Log::endl();
 
 	struct stat	statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
-		Log(Log::ERROR) << "File not found: " << path << Log::endl();
+		Log(Log::ERROR) << "File not found:" << path << Log::endl();
 		return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");
 	}
 
 	if (S_ISDIR(statbuf.st_mode))
 	{
-		path += "/www/test.html";
+		path += "/www/index.html";
 		if (stat(path.c_str(), &statbuf) != 0)
 		{
+			Log(Log::ERROR) << "Directory index not found:" << path << Log::endl();
 			return ("HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");
 		}
 	}
@@ -127,40 +123,53 @@ std::string handleGetRequest(std::string& path)
 		response += "Content-Length: " + content_length + "\r\n";
 		response += "\r\n" + content;
 
+		Log(Log::SUCCESS) << "File served successfully: " << path << Log::endl();
+
 		return (response);
 	}
 	else
 	{
+		Log(Log::ERROR) << "Failed to open file: " << path << Log::endl();
 		return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");
 	}
 }
 
-std::string	handlePostRequest(void)
+std::string	handlePostRequest(std::string body)
 {
+	std::ostringstream	oss;
+	oss << body.size();
+	std::string	content_length = oss.str();
+
+	Log() << "Post request with body: " << body << Log::endl();
+
 	std::string	response = "HTTP/1.1 200 OK\r\n";
 	response += "Content-Type: text/plain\r\n";
-	response += "Content-Length: 13\r\n";
-	response += "\r\n";
-	response += "Hello, World!\n";
+	response += "Content-Length: " + content_length + "\r\n\r\n";
+	response += body;
+
+	Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
+
 	return (response);
 }
 
 std::string	handleDeleteRequest(const std::string& request)
 {
-	std::string	path = "." + request;
+	std::string	path = "www" + request;
 
-	if (path == "./")
-	{
-		return ("HTTP/1.1 400 Bad Request\r\n\r\n");
-	}
+	Log() << "Delete request for: " << path << Log::endl();
 
 	if (remove(path.c_str()) == 0)
 	{
-		return ("HTTP/1.1 200\r\n\r\nFile deleted successfully\r\n");
+		Log(Log::SUCCESS) << "File deleted !" << path << Log::endl();
+		return ("HTTP/1.1 200 OK\r\n\r\nFile deleted successfully :)\r\n");
 	}
 	else
 	{
-		return ("HTTP/1.1 404 Not Found\r\n\r\n");
+		Log(Log::ERROR) << "Failed to delete " << path << Log::endl();
+		return ("HTTP/1.1 403 Forbidden\r\n"
+			"Content-Type: text/plain\r\n"
+			"Content-Length: 25\r\n\r\n"
+			"Could not delete file :(\n");
 	}
 }
 
@@ -171,39 +180,40 @@ void Webserv::run()
 	_epoll_fd = epoll_create(10);
 	if (_epoll_fd == -1)
 	{
-		Log(Log::ERROR) << "Failed to create epoll instance" << Log::endl();
+		Log(Log::ALERT) << "Failed to create epoll instance" << Log::endl();
 		return ;
 	}
 
 	_listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (_listener_fd < 0)
 	{
-		Log(Log::ERROR) << "Failed to create socket" << Log::endl();
+		Log(Log::ALERT) << "Failed to create socket" << Log::endl();
 		return ;
 	}
 
 	int	opt = 1;
 	if (setsockopt(_listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 	{
-		Log(Log::ERROR) << "setsockopt failed" << Log::endl();
+		Log(Log::ALERT) << "setsockopt failed" << Log::endl();
 		return ;
 	}
 
 	struct sockaddr_in	server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = INADDR_ANY;
-//	server_addr.sin_port = htons(_servers[0].port);
+	server_addr.sin_port = htons(_servers[0].listen.begin()->second);
 
 	if (bind(_listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
 	{
-		Log(Log::ERROR) << "bind failed" << Log::endl();
+		perror("bind");
+		Log(Log::ALERT) << "bind failed" << Log::endl();
 		CLOSE(_listener_fd);
 		return ;
 	}
 
 	if (listen(_listener_fd, SOMAXCONN) == -1)
 	{
-		Log(Log::ERROR) << "listen failed" << Log::endl();
+		Log(Log::ALERT) << "listen failed" << Log::endl();
 		return ;
 	}
 
@@ -212,7 +222,7 @@ void Webserv::run()
 	ev.data.fd = _listener_fd;
 	if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _listener_fd, &ev) == -1)
 	{
-		Log(Log::ERROR) << "epoll_ctl failed" << Log::endl();
+		Log(Log::ALERT) << "epoll_ctl failed" << Log::endl();
 		return ;
 	}
 
@@ -272,15 +282,22 @@ void Webserv::run()
 					}
 
 					HttpRequest	httpReq = parseRequest(request);
+					CgiHandler	cgi(httpReq.method, "", "");
 					std::string	response;
-
-					if (httpReq.method == "GET")
+					
+					if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
+					{ 
+						// if (contentLength != 0) cgi.addBody();
+						Log(Log::LOG) << "launching cgi" << Log::endl();
+						response = cgi.launch();
+					}
+					else if (httpReq.method == "GET")
 					{
 						response = handleGetRequest(httpReq.path);
 					}
 					else if (httpReq.method == "POST")
 					{
-						response = handlePostRequest();
+						response = handlePostRequest(httpReq.body);
 					}
 					else if (httpReq.method == "DELETE")
 					{

@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 20:01:18 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/11 13:10:11 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "Webserv.hpp"
 #include "Log.hpp"
 
 #define	INPUT					1
@@ -26,9 +27,6 @@
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
 #define	DEFAULT_SERVER_ROOT		"/home/ygille/42/www/"
-
-#define ENV_SIZE				ENV_LAST_ELEM + 1
-#define	INFO_SIZE				INFO_LAST_ELEM + 1
 
 /*	example URL
 	http://example.com/cgi-bin/script.cgi/extra/path/file.txt?key=value&foo=bar
@@ -97,27 +95,10 @@ enum
 	INFO_LAST_ELEM = EXECUTED
 };
 
-typedef struct	s_pipes
-{
-	int	to_cgi[2];
-	int	from_cgi[2];
-}	t_pipes;
+#define ENV_SIZE				ENV_LAST_ELEM + 1
+#define	INFO_SIZE				INFO_LAST_ELEM + 1
 
-class	CgiHandler
-{
-public:
-
-	CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script);
-	~CgiHandler();
-
-	void		addBody(const std::string& body);
-	std::string	launch();
-
-protected:
-
-private:
-
-	std::string	envConstruct[ENV_SIZE] = {	"REQUEST_METHOD=",
+const std::string	baseEnv[ENV_SIZE] = {	"REQUEST_METHOD=",
 											"SCRIPT_NAME=",
 											"PATH_INFO=",
 											"PATH_TRANSLATED=",
@@ -140,19 +121,52 @@ private:
 											"SCRIPT_FILENAME=",
 											"REDIRECT_STATUS=",
 											"GATEWAY_INTERFACE="};
+
+const bool			baseInfos[INFO_SIZE] = {false, false, false, false};
+
+typedef struct	s_pipes
+{
+	int	to_cgi[2];
+	int	from_cgi[2];
+}	t_pipes;
+
+struct	HttpRequest;
+struct	Location;
+
+class	CgiHandler
+{
+public:
+
+	CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength);
+	~CgiHandler();
+
+	void		addBody(const std::string& body);
+	std::string	launch();
+
+	bool		cgiRequest(HttpRequest request, std::vector<Location> locations);
+
+protected:
+
+private:
+
+	std::string	envConstruct[ENV_SIZE];
 	char*		env[ENV_SIZE + 1];
+
+	std::string method;
+	std::string	contentType;
+	std::string contentLength;
 
 	std::string	cgi;
 	std::string script;
 
-	bool		info[INFO_SIZE] = {false, false, false, false};
+	bool		info[INFO_SIZE];
 
 	t_pipes		pipes;
 
 	int			pid;
 
 	void		createPipes();
-	void		constructEnv(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script);
+	void		constructEnv();
 	void		closePipes();
 	void		childProcess();
 	std::string	father();

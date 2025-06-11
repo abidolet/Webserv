@@ -3,26 +3,28 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
+/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/06 20:04:08 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/11 14:24:28 by mjuncker         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
-: cgi(cgi), script(script)
+CgiHandler::CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength)
+: method(method), contentType(contentType), contentLength(contentLength)
 {
-	this->constructEnv(cgi, method, contentType, contentLength, script);
-	this->createPipes();
+	for (int i = 0; i < ENV_SIZE; ++i)
+		this->envConstruct[i] = baseEnv[i];
+	for (int i = 0; i < INFO_SIZE; ++i)
+		this->info[i] = baseInfos[i];
 }
 
-CgiHandler::CgiHandler(const CgiHandler& other){}
+CgiHandler::CgiHandler(const CgiHandler& other){(void) other;}
 
-CgiHandler& CgiHandler::operator=(const CgiHandler& other){return (*this);}
+CgiHandler& CgiHandler::operator=(const CgiHandler& other){(void) other; return (*this);}
 
 CgiHandler::~CgiHandler()
 {
@@ -74,19 +76,19 @@ void	CgiHandler::createPipes()
 	this->info[PIPES_OPENED] = true;
 }
 
-void	CgiHandler::constructEnv(const std::string& cgi, const std::string& method, const std::string& contentType, const std::string& contentLength, const std::string& script)
+void	CgiHandler::constructEnv()
 {
 	if (contentLength.length() > 1)
 	{
-		this->envConstruct[CONTENT_LENGTH].append(contentLength);
-		this->envConstruct[CONTENT_TYPE].append(contentType);
+		this->envConstruct[CONTENT_LENGTH].append(this->contentLength);
+		this->envConstruct[CONTENT_TYPE].append(this->contentType);
 		this->info[AS_BODY] = true;
 	}
 	
-	this->envConstruct[REQUEST_METHOD].append(method);
+	this->envConstruct[REQUEST_METHOD].append(this->method);
 	this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
-	this->envConstruct[SCRIPT_FILENAME].append(script);
-	this->envConstruct[SCRIPT_NAME].append(script);
+	this->envConstruct[SCRIPT_FILENAME].append(this->script);
+	this->envConstruct[SCRIPT_NAME].append(this->script);
 
 	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
 
@@ -151,4 +153,26 @@ std::string	CgiHandler::father()
 	else
     	Log(Log::ERROR) << "CGI script terminated abnormally" << Log::endl();
 	return cgi_output;
+}
+
+bool	CgiHandler::cgiRequest(HttpRequest request, std::vector<Location> locations)
+{
+	std::string	extension;
+	size_t		extPos = request.path.find_last_of('.');
+
+	if (extPos == request.path.npos)
+		return false;
+	extension.append(const_cast<char*>(request.path.c_str()), extPos + 1, request.path.npos);
+	for (std::vector<Location>::iterator it = locations.begin(); it != locations.end(); ++it)
+	{
+		if (locations.data()->cgi_extension == extension)
+		{
+			this->cgi = locations.data()->cgi_pass;
+			this->script = request.path;
+			this->constructEnv();
+			this->createPipes();
+			return true;
+		}
+	}
+	return false;
 }
