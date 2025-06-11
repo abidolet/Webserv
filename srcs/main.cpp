@@ -1,5 +1,6 @@
 #include "Webserv.hpp"
 #include "Log.hpp"
+#include "Parser.hpp"
 #include <csignal>
 #include <cstdlib>
 
@@ -24,26 +25,28 @@ void	handle_signal(int signal)
 
 int main (int argc, char *argv[])
 {
-	if (argc > 2)
+	signal(SIGINT, handle_signal);
+	signal(SIGQUIT, handle_signal);
+	signal(SIGTERM, handle_signal);
+
+	std::string	file;
+	if (argc == 1)
+	{
+		file = DEFAULT_CONF_PATH;
+	}
+	else if (argc == 2)
+	{
+		file = argv[1];
+	}
+	else
 	{
 		Log(Log::WARNING) << "Usage: ./webserv [config_file]" << Log::endl();
 		return (1);
 	}
 
-	// Log::disableFlags(F_DEBUG | F_LOG);
-
 	try
 	{
-		signal(SIGINT, handle_signal);
-		signal(SIGQUIT, handle_signal);
-		signal(SIGTERM, handle_signal);
-
-		Webserv	server;
-		if (argc == 2)
-		{
-			Webserv	server(argv[1]);
-		}
-
+		Webserv	server(file);
 		server.run();
 	}
 	catch (const std::exception& e)
@@ -51,8 +54,8 @@ int main (int argc, char *argv[])
 		if (static_cast<std::string>(e.what()) != "exit")
 		{
 			Log(Log::ERROR) << e.what() << Log::endl();
+			return (1);
 		}
-		return (1);
 	}
 	return (0);
 }

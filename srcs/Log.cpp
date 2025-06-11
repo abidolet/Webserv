@@ -46,8 +46,8 @@ void Log::toggleFlags(uint16_t flags)
 
 Log::Log(Log::Type type)
 {
-	m_type = type;	
-	displayTimestamp();	
+	m_type = type;
+	displayTimestamp();
 	switch (type)
 	{
 		case LOG:
@@ -56,11 +56,11 @@ Log::Log(Log::Type type)
 		case WARNING:
 			m_oss << YELLOW << "[WARNING] " << RESET;
 			break;
-		case ERROR: 
+		case ERROR:
 			m_oss << RED << "[ERROR]   " << RESET;
 			break;
 		case ALERT:
-			m_oss << B_RED<< "[ALERT]    " << RESET;
+			m_oss << B_RED<< "[ALERT]   " << RESET;
 			break;
 		case DEBUG:
 			m_oss << PURPLE << "[DEBUG]   " << GRAY;
