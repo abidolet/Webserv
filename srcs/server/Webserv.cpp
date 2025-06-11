@@ -282,9 +282,16 @@ void Webserv::run()
 					}
 
 					HttpRequest	httpReq = parseRequest(request);
+					CgiHandler	cgi(httpReq.method, "", "");
 					std::string	response;
-
-					if (httpReq.method == "GET")
+					
+					if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
+					{ 
+						// if (contentLength != 0) cgi.addBody();
+						Log(Log::LOG) << "launching cgi" << Log::endl();
+						response = cgi.launch();
+					}
+					else if (httpReq.method == "GET")
 					{
 						response = handleGetRequest(httpReq.path);
 					}

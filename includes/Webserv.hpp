@@ -5,6 +5,8 @@
 # include <vector>
 # include <map>
 
+#include "CgiHandler.hpp"
+
 struct	HttpRequest
 {
 	std::string							method;
@@ -16,13 +18,13 @@ struct	HttpRequest
 struct	Location
 {
 	Location()
-		: path("/var/www/html"), root("/"), index("index.html"), cgi_pass("TODO"), cgi_extensions(std::vector<std::string>(1, "TODO")) {}
+		: path("/var/www/html"), root("/"), index("index.html"), cgi_pass("TODO"), cgi_extension("TODO") {}
 
 	std::string					path;
 	std::string					root;
 	std::string					index;
 	std::string					cgi_pass;
-	std::vector<std::string>	cgi_extensions;
+	std::string					cgi_extension;
 };
 
 struct	Server

@@ -163,7 +163,7 @@ void printServConfig(Server serv)
 			Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> cgi pass:" << it->cgi_pass << Log::endl();
-			Log(Log::DEBUG) << "\t|\t|-> cgi extension:" << Tools::strUnite(it->cgi_extensions, ",") << Log::endl();
+			Log(Log::DEBUG) << "\t|\t|-> cgi extension:" << it->cgi_extension << Log::endl();
 			it++;
 		}
 	}
