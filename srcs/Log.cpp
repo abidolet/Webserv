@@ -117,19 +117,3 @@ std::ostream& operator<<(std::ostream &stream, const Log::endl endl)
 	return stream;
 }
 
-std::ostream& operator<<(std::ostream& stream, const Cgi_Type& type)
-{
-	switch (type)
-	{
-		case NONE:
-			stream << "NONE";
-			break;
-		case PHP:
-			stream << "PHP";
-			break;
-		default:
-			stream << "unknow type in std::ostream& operator<<(std::ostream& stream, const Cgi_Type& type); " << __FILE__ << ":" << __LINE__;
-		break;
-	}
-	return stream;
-}

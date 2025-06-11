@@ -114,7 +114,6 @@ void printServConfig(Server serv)
 			Log(Log::DEBUG) << "\t|\t|-> path:" << it->path << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
-			Log(Log::DEBUG) << "\t|\t|-> type:" << it->type << Log::endl();
 
 			Log(Log::DEBUG) << "\t|\t|-> cgi pass:" << it->cgi_pass << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> cgi extension:" << it->cgi_extension << Log::endl();
@@ -158,7 +157,7 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 			if (split[2] == ".php")
 			{
 				Log() << "found cgi type: `php'";
-				tmp.type = PHP;
+				// tmp.type = PHP;
 			}
 			else
 				throw Parser::InvalidArgumentException(split[1], ".php");

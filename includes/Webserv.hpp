@@ -15,14 +15,6 @@ struct	HttpRequest
 	std::map<std::string, std::string>	headers;
 };
 
-enum Cgi_Type
-{
-	NONE = 0,
-	PHP,
-};
-
-std::ostream& operator<<(std::ostream& stream, const Cgi_Type& type);
-
 struct	Location
 {
 #if old
@@ -32,8 +24,6 @@ struct	Location
 
 	Location()
 	: path("/var/www/html"), root("/"), index("index.html"), cgi_pass("TODO"), cgi_extension("TODO") {}
-
-		Cgi_Type		type;
 
 		std::string		path;
 		std::string		root;
