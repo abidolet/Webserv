@@ -4,7 +4,7 @@ MODE ?= release
 OBJ_DIR = obj-$(MODE)
 INCLUDES = -Iincludes
 
-CXX = c++
+CXX = g++
 CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -std=c++98
 
 ifeq ($(MODE), debug)
@@ -18,6 +18,7 @@ SRCS =	main.cpp		\
 		Parser.cpp		\
 		Log.cpp			\
 		ParserTools.cpp	\
+		Block.cpp		\
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 DEPS = $(OBJS:.o=.d)
@@ -36,7 +37,6 @@ all:
 
 debug:
 	$(MAKE) MODE=debug all
-	./webserv ./conf/default.conf
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)

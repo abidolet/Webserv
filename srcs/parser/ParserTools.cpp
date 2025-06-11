@@ -79,14 +79,12 @@ namespace Tools
 		return str;
 	}
 
-	// TODO: pour le closest a la place do calculer la value total de la str, juste calculer la diff entre chaque lettre, comme ca abc plus proche de abd que cba 
-	// TODO  dans le system acutel abc == cba vu que y'a les meme lettres
 	std::string findClosest(std::string str, std::vector<std::string> options)
 	{
 		int idx = 0;
 		int	str_val = getStrValue(str);
 		std::vector<std::string> strs;
-		
+
 		str = toLower(str);
 		strs = toLowers(options);
 
@@ -99,6 +97,38 @@ namespace Tools
 		}
 		return options[idx];
 	}
+
+#if OLD
+	// TODO: pour le closest a la place do calculer la value total de la str, juste calculer la diff entre chaque lettre, comme ca abc plus proche de abd que cba 
+	// TODO  dans le system acutel abc == cba vu que y'a les meme lettres
+	std::string findClosest(std::string str, std::vector<std::string> options)
+	{
+		std::string result;
+		int bestMatch = 9999;
+
+		std::vector<std::string>::iterator it = options.begin();
+		for ( ; it != options.end(); ++it)
+		{
+			int totalDiff = 0;
+
+			size_t i = 0;
+			while (i < str.size() || i < it->size())
+			{
+				if (i < str.size() && i < it->size())
+					totalDiff += abs(tolower((*it)[i]) - tolower(str[i]));
+
+				i++;
+			}
+			if (totalDiff < bestMatch)
+			{
+				bestMatch = totalDiff;
+				result = *it;
+			}
+		}
+
+		return result;
+	}
+#endif
 
 	std::string toLower(std::string str)
 	{

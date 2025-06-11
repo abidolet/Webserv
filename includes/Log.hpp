@@ -35,6 +35,7 @@
 
 #define GET_VAR_NAME(name) #name
 
+
 class Log
 {
 public:
@@ -78,46 +79,8 @@ public:
 		return *this;
 	}
 
-	template <>
-	Log& operator<<<Log::endl>(const Log::endl& value)
-	{
-
-		switch (m_type)
-		{
-			case LOG:
-				if (!(m_flags & F_LOG))
-					return *this;
-				break;
-			case DEBUG:
-				if (!(m_flags & F_DEBUG))
-					return *this;
-				break;
-			case WARNING:
-				if (!(m_flags & F_WARNING))
-					return *this;
-				break;
-			case SUCCESS:
-				if (!(m_flags & F_SUCCESS))
-					return *this;
-				break;
-			case ERROR:
-				if (!(m_flags & F_ERROR))
-					return *this;
-				break;
-			case ALERT:
-				if (!(m_flags & F_ALERT))
-					return *this;
-				break;
-		}
-
-		(void)value;
-		if (m_type == LOG || m_type == DEBUG || m_type == SUCCESS)
-			std::cout << m_oss.str() << RESET << std::endl;
-		else
-			std::cerr << m_oss.str() << RESET << std::endl;
-		return *this;
-	}
-
 };
+std::ostream& operator<<(std::ostream &stream, const Log::endl endl);
+
 
 #endif

@@ -1,5 +1,5 @@
 #include "Log.hpp"
-#include <stdarg.h>
+#include "Webserv.hpp"
 
 #include <ctime>
 #include <iomanip>
@@ -71,4 +71,65 @@ Log::Log(Log::Type type)
 	}
 }
 
+template <>
+Log& Log::operator<<<Log::endl>(const Log::endl& value)
+{
 
+	switch (m_type)
+	{
+		case LOG:
+			if (!(m_flags & F_LOG))
+				return *this;
+		break;
+		case DEBUG:
+			if (!(m_flags & F_DEBUG))
+				return *this;
+		break;
+		case WARNING:
+			if (!(m_flags & F_WARNING))
+				return *this;
+		break;
+		case SUCCESS:
+			if (!(m_flags & F_SUCCESS))
+				return *this;
+		break;
+		case ERROR:
+			if (!(m_flags & F_ERROR))
+				return *this;
+		break;
+		case ALERT:
+			if (!(m_flags & F_ALERT))
+				return *this;
+		break;
+	}
+
+	(void)value;
+	if (m_type == LOG || m_type == DEBUG || m_type == SUCCESS)
+		std::cout << m_oss.str() << RESET << std::endl;
+	else
+		std::cerr << m_oss.str() << RESET << std::endl;
+	return *this;
+}
+
+std::ostream& operator<<(std::ostream &stream, const Log::endl endl)
+{
+	(void)endl;
+	return stream;
+}
+
+std::ostream& operator<<(std::ostream& stream, const Cgi_Type& type)
+{
+	switch (type)
+	{
+		case NONE:
+			stream << "NONE";
+			break;
+		case PHP:
+			stream << "PHP";
+			break;
+		default:
+			stream << "unknow type in std::ostream& operator<<(std::ostream& stream, const Cgi_Type& type); " << __FILE__ << ":" << __LINE__;
+		break;
+	}
+	return stream;
+}

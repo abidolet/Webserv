@@ -8,10 +8,10 @@
 
 void print_block(Block block, int depth)
 {
-	std::vector<std::string>::iterator it = block.content.begin();
+	std::vector<std::string>::iterator it = block.directives.begin();
 
 	Log(Log::DEBUG) << "block name:" << block.block_name << Log::endl();
-	while (it != block.content.end())
+	while (it != block.directives.end())
 	{
 		Log(Log::LOG) << "depth:" << depth << *it << Log::endl();
 		it++;
@@ -25,13 +25,13 @@ void print_block(Block block, int depth)
 }
 
 Parser::Parser(const std::string& filepath)
-	: m_block("root"), m_filepath(filepath), default_config_path("./conf/default.conf") 
+	: m_block("root"), m_filepath(filepath), default_config_path("./conf/default.conf")
 {
 	m_stream.open(filepath.c_str());
 	if (!m_stream.good() || !m_stream.is_open())
 		throw std::runtime_error("cannot open " + filepath);
 	m_file = Tools::read_file(m_stream);
-	Log(Log::SUCCESS) << filepath << " is loaded!" << Log::endl();
+	Log(Log::SUCCESS) << filepath << "is loaded!" << Log::endl();
 	
 	parseBlock();
 }
@@ -42,17 +42,16 @@ void Parser::parseBlock()
 	m_block = loadBlock(it, "root");
 }
 
-Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string name)
+Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string _name)
 {
-	Block block(name);
-
+	Block block(_name);
 	while (it != m_file.end())
 	{
 		if (it->find("{") != (size_t)-1)
 		{
 			Log(Log::DEBUG) << *it << Log::endl();
 			std::string name = Tools::strtrim(*it, " \t{");
-			it++;
+			++it;
 			block.inners.push_back(loadBlock(it, name));
 		}
 		else if (it->find("}") != (size_t)-1)
@@ -62,8 +61,10 @@ Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string name
 		}
 		else
 		{
+			if (block.block_name == "root")
+				throw std::runtime_error("missing `{' on line `" + *it + "'");
 			if (Tools::should_add_line(*it))
-				block.content.push_back(Tools::strtrim(*it, " \t"));
+				block.directives.push_back(Tools::strtrim(*it, " \t"));
 			Log(Log::DEBUG) << *it << Log::endl();
 		}
 		it++;
@@ -71,55 +72,6 @@ Block Parser::loadBlock(std::vector<std::string>::iterator& it, std::string name
 	if (block.block_name != "root")
 		throw std::runtime_error("missing `}'");
 	return block;
-}
-
-bool blockAssert(std::vector<Block> blocks, std::vector<std::string> shouldBeFound, std::string blockName)
-{
-	std::vector<Block>::iterator block = blocks.begin();
-	while (block != blocks.end())
-	{
-		if (block->block_name.substr(0, block->block_name.find(" ")) != blockName)
-			throw Parser::InvalidArgumentException(block->block_name, blockName);
-
-		std::vector<std::string>::iterator it = block->content.begin();
-		std::string	firstWord;
-		while (it != block->content.end())
-		{
-			firstWord = it->substr(0, it->find(" "));
-
-			size_t i = 0;
-			for ( ; i < shouldBeFound.size() ; i++)
-			{
-				if (firstWord == shouldBeFound[i])
-					break;
-			}
-			if (i == shouldBeFound.size())
-				throw Parser::InvalidArgumentException(firstWord, Tools::findClosest(firstWord, shouldBeFound));
-
-			it++;
-		}
-		block++;
-	}
-
-	return true;
-}
-
-std::vector<std::string> getEntries(Block block, const std::string& keyword)
-{
-	std::vector<std::string> results;
-	std::string firstWord;
-
-	std::vector<std::string>::iterator it = block.content.begin();
-	while (it != block.content.end())
-	{
-		firstWord = it->substr(0, it->find(" "));
-		if (firstWord == keyword)
-		{
-			results.push_back(it->substr(it->find(" ") + 1, it->size() - it->find(" ") + 1));
-		}
-		++it;
-	}
-	return results;
 }
 
 void printServConfig(Server serv)
@@ -162,35 +114,22 @@ void printServConfig(Server serv)
 			Log(Log::DEBUG) << "\t|\t|-> path:" << it->path << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 			Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
-			Log(Log::DEBUG) << "\t|\t|-> cgi pass:" << it->cgi_pass << Log::endl();
-			Log(Log::DEBUG) << "\t|\t|-> cgi extension:" << Tools::strUnite(it->cgi_extensions, ",") << Log::endl();
+			Log(Log::DEBUG) << "\t|\t|-> type:" << (Cgi_Type)80 << Log::endl();
+
+			// Log(Log::DEBUG) << "\t|\t|-> cgi pass:" << it->cgi_pass << Log::endl();
+			// Log(Log::DEBUG) << "\t|\t|-> cgi extension:" << Tools::strUnite(it->cgi_extensions, ",") << Log::endl();
+
 			it++;
 		}
 	}
 }
 
-void setupLocationPath(Location& location, const Block& block)
+void setupLocationPath(Location& location, Block& block)
 {
-	std::vector<std::string> found = getEntries(block, "path");
-	if (found.empty())
-		return;
-	if (found.size() > 1)
-		throw Parser::TooMuchDirectiveException("path", block);
+	block.loadSingleDirective("path", location.path);
 
-	location.path = found[0];
 	if (location.path[0] != '/')
 		throw std::runtime_error("`path' directive must be an absolute path");
-}
-
-void setupLocationIndex(Location& location, const Block& block)
-{
-	std::vector<std::string> found = getEntries(block, "index");
-	if (found.empty())
-		return;
-	if (found.size() > 1)
-		throw Parser::TooMuchDirectiveException("path", block);
-
-	location.index = found[0];
 }
 
 std::vector<Location> populateLocationInfos(Block serv_block)
@@ -198,7 +137,7 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 	std::vector<Location> locations;
 
 	const std::string locationOptions[] = {"index", "path"};
-	blockAssert(serv_block.inners, std::vector<std::string>(locationOptions, locationOptions + 2), "location");
+	serv_block.blockAssert(std::vector<std::string>(locationOptions, locationOptions + 2), "location");
 
 	std::vector<Block>::iterator it = serv_block.inners.begin();
 	while (it != serv_block.inners.end())
@@ -207,28 +146,41 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 
 		// root
 		std::vector<std::string> split = Tools::strsplit(it->block_name, ' ');
-		if (split.size() != 2)
+		if (split.size() == 1)
 			throw Parser::InvalidDirectiveException("location", it->block_name);
+
 		tmp.root = split[1];
+		if (split[1] == "~") // for cgi
+		{
+			Log() << "found cgi location block" << Log::endl();
+			if (split.size() != 3)
+				throw std::runtime_error("invalid option in `" + it->block_name + "'");
+			if (split[2] == ".php")
+			{
+				Log() << "found cgi type: `php'";
+				tmp.type = PHP;
+			}
+			else
+				throw Parser::InvalidArgumentException(split[1], ".php");
+			tmp.root = split[2];
+		}
 		// ---
 
 		setupLocationPath(tmp, *it);
-		setupLocationIndex(tmp, *it);
+		it->loadSingleDirective("index", tmp.index);
 
 		locations.push_back(tmp);
-		it++;
+		++it;
 	}
 	return locations;
 }
 
-//
 // TODO check for format error in the listen directive (e.g: az.by.cvwc.fg323:3243233)
-//
-void	setupListen(Server& serv, const Block &block)
+void	setupListen(Server& serv, Block &block)
 {
 	std::map<std::string, int>	result;
 
-	std::vector<std::string> found = getEntries(block, "listen");
+	std::vector<std::string> found = block.loadDirectives("listen");
 	if (found.empty())
 		return;
 
@@ -262,9 +214,9 @@ void	setupListen(Server& serv, const Block &block)
 	serv.listen = result;
 }
 
-void setupMaxBodySize(Server& serv, const Block& block)
+void setupMaxBodySize(Server& serv, Block& block)
 {
-	std::vector<std::string> found = getEntries(block, "client_max_body_size");
+	std::vector<std::string> found = block.loadDirectives("client_max_body_size");
 	if (found.empty())
 		return;
 
@@ -285,9 +237,9 @@ void setupMaxBodySize(Server& serv, const Block& block)
 		serv.client_max_body_size = tmp;
 }
 
-void setupAllowedMethods(Server& serv, const Block& block)
+void setupAllowedMethods(Server& serv, Block& block)
 {
-	std::vector<std::string> found = getEntries(block, "allowed_methods");
+	std::vector<std::string> found = block.loadDirectives("allowed_methods");
 	if (found.empty())
 		return;
 
@@ -307,36 +259,39 @@ void setupAllowedMethods(Server& serv, const Block& block)
 		}
 		if (i == 3)
 			throw Parser::InvalidArgumentException(*it, Tools::findClosest(*it, std::vector<std::string>(avaibleStrs, avaibleStrs + 3)));
-		it++;
+		++it;
 	}
 }
 
-void setupRedirections(Server& serv, const Block& block)
+void setupRedirections(Server& serv, Block& block)
 {
-	std::vector<std::string> found = getEntries(block, "error_page");
+	std::vector<std::string> found = block.loadDirectives("error_page");
 	if (found.empty())
 		return;
 
-	std::string str = found[0]; //TODO: ne support que une seule redirection
-	std::vector<std::string> redirs = Tools::strsplit(str, ' ');
-	if (redirs.size() <= 1)
-		throw std::runtime_error("invalid directive: `error_page'");
-
-	// isolating the error page
-	std::string error_page = redirs[redirs.size() - 1];
-	redirs.pop_back();
-
-	if (	Tools::is_number(redirs) == false)
-		if (error_page[0] != '/')
-		throw std::runtime_error("invalid page path: `error_page'");
-
-	for (size_t i = 0; i < redirs.size(); i++)
+	for (size_t j = 0; j < found.size(); j++)
 	{
-		int code = std::atoi(redirs[i].c_str());
-		if (serv.error_pages.find(code) != serv.error_pages.end()) // need to override previous page
+		std::string str = found[j];
+		std::vector<std::string> redirs = Tools::strsplit(str, ' ');
+		if (redirs.size() <= 1)
+			throw std::runtime_error("invalid directive: `error_page'");
+
+		// isolating the error page
+		std::string error_page = redirs[redirs.size() - 1];
+		redirs.pop_back();
+
+		if (	Tools::is_number(redirs) == false)
+			if (error_page[0] != '/')
+				throw std::runtime_error("invalid page path: `error_page'");
+
+		for (size_t i = 0; i < redirs.size(); i++)
+		{
+			int code = std::atoi(redirs[i].c_str());
+			if (serv.error_pages.find(code) != serv.error_pages.end())
 				serv.error_pages.find(code)->second = error_page;
-		else
-			serv.error_pages.insert(std::pair<int, std::string>(code, error_page));
+			else
+				serv.error_pages.insert(std::pair<int, std::string>(code, error_page));
+		}
 	}
 }
 
@@ -345,7 +300,7 @@ Server Parser::populateServerInfos()
 	Server serv;
 	const std::string serverOption[] = {"listen", "host", "server_name", "return", "client_max_body_size", "allowed_methods", "error_page"};
 
-	blockAssert(m_block.inners, std::vector<std::string>(serverOption, serverOption + 7), "server"); 
+	m_block.blockAssert(std::vector<std::string>(serverOption, serverOption + 7), "server");
 	Log(Log::SUCCESS) << "server block is good" << Log::endl();
 	std::vector<Block>::iterator it = m_block.inners.begin();
 
@@ -354,7 +309,7 @@ Server Parser::populateServerInfos()
 	//
 	while (it != m_block.inners.end())
 	{
-		serv.server_name = getEntries(*it, "server_name")[0];
+		it->loadSingleDirective("server_name", serv.server_name);
 		setupListen(serv, *it);
 		setupMaxBodySize(serv, *it);
 		setupAllowedMethods(serv, *it);
@@ -377,19 +332,15 @@ Server Parser::populateServerInfos()
 // [x] port
 // [x] client_max_body_size
 // [x] allowed_methods
-// [ ] redirection
+// [x] redirection
 // [~] location
-// [ ]  | path
-// [ ]  | root
-// [ ]  | index
+// [x]  | path
+// [x]  | root
+// [x]  | index
 // [ ]  | cgi pass
 // [ ]  | cgi extension
 //
 
 //TODO check le parsing:
 // [ ] mettre des blocs sans le `{'
-// [ ] mettre des str la ou y'a besoin de nomber
-
-// TODO:
-// mettre une exception si u'a deux fois la meme directive (ex host 5 puis apres host 8080)
-//! ca crach si on fais une `{` toute seule
+// [ ] mettre des str la ou y'a besoin de nombre

@@ -13,16 +13,34 @@ struct	HttpRequest
 	std::map<std::string, std::string>	headers;
 };
 
+enum Cgi_Type
+{
+	NONE = 0,
+	PHP,
+};
+
+std::ostream& operator<<(std::ostream& stream, const Cgi_Type& type);
+
 struct	Location
 {
+#if old
 	Location()
 		: path("/var/www/html"), root("/"), index("index.html"), cgi_pass("TODO"), cgi_extensions(std::vector<std::string>(1, "TODO")) {}
+#endif
 
-	std::string					path;
-	std::string					root;
-	std::string					index;
+	Location()
+		: path("/var/www/html"), root("/"), index("index.html"), type(NONE) {}
+
+	std::string		path;
+	std::string		root;
+	std::string		index;
+
+	Cgi_Type		type;
+
+#if old
 	std::string					cgi_pass;
 	std::vector<std::string>	cgi_extensions;
+#endif
 };
 
 struct	Server

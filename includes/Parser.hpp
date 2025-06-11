@@ -6,21 +6,13 @@
 #include <fstream>
 #include <exception>
 
+#include "Block.hpp"
+
 struct Server;
 
 #define DEFAULT_CONF_PATH "./conf/default.conf"
 
-class Block
-{
-public:
-	Block(std::string name) : block_name(name) {}
 
-
-	std::string block_name;
-
-	std::vector<std::string>	content;
-	std::vector<Block>			inners;
-};
 
 class Parser
 {
