@@ -42,7 +42,7 @@ void Location::setupLocationRoot(const Block& block)
 		if (split.size() != 3)
 			throw std::runtime_error("invalid option in `" + block.block_name + "'");
 
-		const std::string options[] = {".php"};
+		const std::string options[] = {".php", ".bla"};
 		for (size_t i = 0; i < options->size(); i++)
 		{
 			if (split[2] == options[i])
@@ -51,9 +51,9 @@ void Location::setupLocationRoot(const Block& block)
 				cgi_extension = options[i];
 				break;
 			}
-			if (cgi_extension.empty())
-				throw Parser::InvalidArgumentException(split[2], Utils::findClosest(split[2], std::vector<std::string>(options, options + 1)));
 		}
+		if (cgi_extension.empty())
+			throw Parser::InvalidArgumentException(split[2], Utils::findClosest(split[2], std::vector<std::string>(options, options + 1)));
 		root = split[2];
 	}
 }
