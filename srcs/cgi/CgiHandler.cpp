@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/12 10:59:51 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/12 14:04:37 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,7 @@ std::string	CgiHandler::father()
 	int status;
     char buffer[1024];
 	ssize_t bytes_read;
-    std::string cgi_output;
+    std::string cgi_output = "HTTP/1.1 200 OK\n";
 
 	close(pipes.to_cgi[OUTPUT]);
     close(pipes.from_cgi[INPUT]);
@@ -150,10 +150,10 @@ std::string	CgiHandler::father()
 	if (WIFEXITED(status)) 
 	{
         if (WEXITSTATUS(status) != 0) 
-            Log(Log::ERROR) << "CGI script failed" << Log::endl();
+            return "HTTP/1.1 500\n";
     }
 	else
-    	Log(Log::ERROR) << "CGI script terminated abnormally" << Log::endl();
+    	return "HTTP/1.1 500\n";
 	return cgi_output;
 }
 
@@ -164,12 +164,12 @@ bool	CgiHandler::cgiRequest(HttpRequest request, std::vector<Location> locations
 
 	if (extPos == request.path.npos)
 		return false;
-	extension.append(const_cast<char*>(request.path.c_str()), extPos + 1, request.path.npos);
+	extension.append(const_cast<char*>(request.path.c_str()), extPos, request.path.npos);
 	for (std::vector<Location>::iterator it = locations.begin(); it != locations.end(); ++it)
 	{
-		if (locations.data()->cgi_extension == extension)
+		if (it->cgi_extension == extension)
 		{
-			this->cgi = locations.data()->cgi_pass;
+			this->cgi = it->cgi_pass;
 			this->script = request.path;
 			this->constructEnv();
 			this->createPipes();
