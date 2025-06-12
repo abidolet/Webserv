@@ -154,12 +154,16 @@ namespace Utils
 	{
 		std::ifstream stream;
 		stream.open(path.c_str());
-		return !stream.fail();
+
+		bool value = !stream.fail();
+		stream.close();
+		return value;
 	}
 
 	void printServConfig(Server serv)
 	{
 		Log(Log::DEBUG) << "server config:" << Log::endl();
+		Log(Log::DEBUG) << "\t|-> root:" << serv.root << Log::endl();
 		Log(Log::DEBUG) << "\t|-> server_name:" << serv.server_name << Log::endl();
 		Log(Log::DEBUG) << "\t|-> client_max_body_size:" << serv.client_max_body_size << Log::endl();
 		Log(Log::DEBUG) << "\t|-> allowed methods:" << Utils::strUnite(serv.allowed_methods, ",") << Log::endl();
@@ -195,10 +199,12 @@ namespace Utils
 				Log(Log::DEBUG) << "\t|\t|-> path:" << it->path << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
-
+				Log(Log::DEBUG) << "\t|\t|-> allowed methods:" << Utils::strUnite(it->allowed_methods, ",") << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> cgi pass: [" << it->cgi_pass << "]" << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> cgi extension: [" << it->cgi_extension << "]" << Log::endl();
+				Log(Log::DEBUG) << "\t|\t|-> is cgi:" << it->is_cgi  << Log::endl();
 			}
 		}
 	}
 }
+

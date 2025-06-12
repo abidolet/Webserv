@@ -13,3 +13,4 @@
 !*.php
 !test
 !*_tester!*.html
+!errors_pages

@@ -26,7 +26,7 @@ void Block::loadSingleDirective(const std::string &keyword, std::string& ref)
     if (found.empty())
         return;
     if (found.size() > 1)
-        throw Parser::TooMuchDirectiveException("path", *this);
+        throw Parser::TooMuchDirectiveException(keyword, *this);
     ref = found[0];
 }
 

@@ -12,7 +12,7 @@ struct Server;
 
 #define DEFAULT_CONF_PATH "./conf/default.conf"
 
-
+std::vector<std::string> setupAllowedMethods(Block& block);
 
 class Parser
 {
@@ -46,7 +46,7 @@ public:
 		}
 
 		virtual ~InvalidArgumentException() throw() {}
-		InvalidArgumentException(std::string wrong, std::string right) : m_wrong(wrong), m_right(right) {}
+		InvalidArgumentException(const std::string& wrong, const std::string& right) : m_wrong(wrong), m_right(right) {}
 
 	private:
 		std::string m_wrong;

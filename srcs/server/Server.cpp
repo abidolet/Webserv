@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <list>
+
 #include "Webserv.hpp"
 #include "Block.hpp"
 #include "ParserUtils.hpp"
@@ -5,9 +8,8 @@
 
 void Server::init(Block &block)
 {
-	listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
-
 	block.loadSingleDirective("server_name", server_name);
+	block.loadSingleDirective("root", root);
 	setupListen(block);
 	setupMaxBodySize(block);
 	setupRedirections(block);
@@ -47,15 +49,15 @@ void Server::setupRedirections(Block& block)
 		std::string str = found[j];
 		std::vector<std::string> redirs = Utils::strsplit(str, ' ');
 		if (redirs.size() <= 1)
-			throw std::runtime_error("invalid directive: `error_page'");
+			throw Parser::InvalidDirectiveException("error_page", str);
 
 		// isolating the error page
 		std::string error_page = redirs[redirs.size() - 1];
 		redirs.pop_back();
 
-		if (	Utils::is_number(redirs) == false)
+		if (Utils::is_number(redirs) == false)
 			if (error_page[0] != '/')
-				throw std::runtime_error("invalid page path: `error_page'");
+				throw Parser::InvalidDirectiveException("error_page", str);
 
 		for (size_t i = 0; i < redirs.size(); i++)
 		{
@@ -73,10 +75,37 @@ void assertListen(const std::string& listen)
 	if (listen.find(':') == (size_t)-1) // so listen is only the port (e.g: 443)
 	{
 		if (Utils::is_number(listen) == false)
-			throw std::runtime_error("invalid listen format");
+			throw Parser::InvalidDirectiveException("listen", listen);
 		return;
 	}
+
 	// listen must be in this format: aa.bb.cc.dd:ee
+	size_t ipPart = 0;
+	for (size_t i = 0; i < listen.size(); )
+	{
+		size_t longestSpan = 0;
+		while (std::isdigit(listen[i]))
+		{
+			longestSpan++;
+			i++;
+		}
+		if (i == listen.size()) // we are at the host part of the config
+			return;
+
+		if (longestSpan > 3)
+			throw Parser::InvalidDirectiveException("listen", listen);
+
+		longestSpan = 0;
+		char separator = ipPart == 3 ? ':' : '.';
+		while (listen[i] == separator)
+		{
+			longestSpan++;
+			i++;
+		}
+		if (longestSpan != 1)
+			throw Parser::InvalidDirectiveException("listen", listen);
+		ipPart++;
+	}
 
 	(void)listen;
 }

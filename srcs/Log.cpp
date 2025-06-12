@@ -69,22 +69,22 @@ Log::Log(Log::Type type)
 	switch (type)
 	{
 		case LOG:
-			m_oss << printCol(GRAY) << "[LOG]     " << printCol(RESET);
+			m_oss << printCol(GRAY) <<	"[LOG]     " << printCol(RESET);
 			break;
 		case WARNING:
-			m_oss << printCol(YELLOW) << "[WARNING] " << printCol(RESET);
+			m_oss << printCol(YELLOW) <<	"[WARNING] " << printCol(RESET);
 			break;
 		case ERROR:
-			m_oss << printCol(RED) << "[ERROR]   " << printCol(RESET);
+			m_oss << printCol(RED) <<		"[ERROR]   ";
 			break;
 		case ALERT:
-			m_oss << printCol(B_RED) << "[ALERT]   " << printCol(RESET);
+			m_oss << printCol(B_RED) <<	"[ALERT]   ";
 			break;
 		case DEBUG:
-			m_oss << printCol(PURPLE) << "[DEBUG]   " << printCol(RESET);
+			m_oss << printCol(PURPLE) <<	"[DEBUG]   " << printCol(RESET);
 			break;
 		case SUCCESS:
-			m_oss << printCol(GREEN) << "[SUCCESS] " << printCol(RESET);
+			m_oss << printCol(GREEN) <<	"[SUCCESS] " << printCol(RESET);
 
 	}
 }
