@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/11 14:24:28 by mjuncker         ###   ########.fr       */
+/*   Updated: 2025/06/12 10:59:51 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,8 +28,7 @@ CgiHandler& CgiHandler::operator=(const CgiHandler& other){(void) other; return 
 
 CgiHandler::~CgiHandler()
 {
-	if (!this->info[EXECUTED])
-		this->closePipes();
+	this->closePipes();
 }
 /* End-Of Canonical Form */
 
@@ -99,11 +98,14 @@ void	CgiHandler::constructEnv()
 
 void	CgiHandler::closePipes()
 {
-	close(this->pipes.from_cgi[OUTPUT]);
-	close(this->pipes.from_cgi[INPUT]);
-	close(this->pipes.to_cgi[OUTPUT]);
-	close(this->pipes.to_cgi[INPUT]);
-	this->info[PIPES_OPENED] = false;
+	if (this->info[PIPES_OPENED])
+	{
+		close(this->pipes.from_cgi[OUTPUT]);
+		close(this->pipes.from_cgi[INPUT]);
+		close(this->pipes.to_cgi[OUTPUT]);
+		close(this->pipes.to_cgi[INPUT]);
+		this->info[PIPES_OPENED] = false;
+	}
 }
 
 void	CgiHandler::childProcess()
