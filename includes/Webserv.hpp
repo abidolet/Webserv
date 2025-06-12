@@ -73,7 +73,6 @@ class	Webserv
 		// std::string	handleDeleteRequest(const std::string& request);
 
 	public:
-		Webserv();
 		Webserv(const std::string& file);
 		~Webserv();
 

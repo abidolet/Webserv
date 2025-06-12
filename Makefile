@@ -55,7 +55,7 @@ $(OBJ_DIR)/%.o: %.cpp Makefile |  $(OBJ_DIR)
 
 leaks:
 	$(MAKE) MODE=debug all
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./webserv
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes ./webserv
 
 clog:
 	rm -rf log_webserv_*
