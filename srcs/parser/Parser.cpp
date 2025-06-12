@@ -52,30 +52,34 @@ Block Parser::loadBlock(std::vector<std::string>::iterator& it, const std::strin
 	return block;
 }
 
-void setupAllowedMethods(Server& serv, Block& block)
+std::vector<std::string> setupAllowedMethods(Block& block)
 {
-	std::vector<std::string> found = block.loadDirectives("allowed_methods");
-	if (found.empty())
-		return;
+	std::string	defaults[] = {"GET", "POST", "DELETE"};
+	std::vector<std::string> result(defaults, defaults + 3);
 
-	const std::string& allowedMethods = found[0];
-	serv.allowed_methods = Utils::strsplit(allowedMethods, ' ');
+	std::string found;
+	block.loadSingleDirective("allowed_methods", found);
+	if (found.empty())
+		return result;
+
+	const std::string& allowedMethods = found;
+	result = Utils::strsplit(allowedMethods, ' ');
 
 	// check if entry is correct
-	const std::string avaibleStrs[3] = {"POST", "GET", "DELETE"};
-	std::vector<std::string>::iterator it = serv.allowed_methods.begin();
-	while (it != serv.allowed_methods.end())
+	std::vector<std::string>::iterator it = result.begin();
+	while (it != result.end())
 	{
 		int i = 0;
 		for ( ; i < 3; i++)
 		{
-			if (*it == avaibleStrs[i])
+			if (*it == defaults[i])
 				break;
 		}
 		if (i == 3)
-			throw Parser::InvalidArgumentException(*it, Utils::findClosest(*it, std::vector<std::string>(avaibleStrs, avaibleStrs + 3)));
+			throw Parser::InvalidArgumentException(*it, Utils::findClosest(*it, std::vector<std::string>(defaults, defaults + 3)));
 		++it;
 	}
+	return result;
 }
 
 std::vector<Location> populateLocationInfos(Block serv_block)
@@ -89,6 +93,7 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 	for ( ; it != serv_block.inners.end(); ++it)
 	{
 		Location tmp(*it);
+		tmp.allowed_methods = setupAllowedMethods(*it);
 		locations.push_back(tmp);
 	}
 	return locations;
@@ -97,9 +102,12 @@ std::vector<Location> populateLocationInfos(Block serv_block)
 Server Parser::populateServerInfos()
 {
 	Server serv;
-	const std::string serverOption[] = {"listen", "host", "server_name", "return", "client_max_body_size", "allowed_methods", "error_page"};
+	const std::string options[] = {
+		"listen", "host", "server_name", "return", "root",
+		"client_max_body_size", "allowed_methods", "error_page"
+	};
 
-	m_block.blockAssert(std::vector<std::string>(serverOption, serverOption + 7), "server");
+	m_block.blockAssert(std::vector<std::string>(options, options + 8), "server");
 	Log(Log::SUCCESS) << "server block is good" << Log::endl();
 
 	//
@@ -110,7 +118,7 @@ Server Parser::populateServerInfos()
 	for ( ; it != m_block.inners.end(); ++it) // loop on each server block
 	{
 		serv.init(*it);
-		setupAllowedMethods(serv, *it);
+		serv.allowed_methods = setupAllowedMethods(*it);
 		serv.locations = populateLocationInfos(*it);
 	}
 
@@ -125,3 +133,4 @@ Server Parser::populateServerInfos()
 //TODO check le parsing:
 // [ ] mettre des blocs sans le `{'
 // [ ] mettre des str la ou y'a besoin de nombre
+// [ ] si une directive a pas de value le comportement est bizarre

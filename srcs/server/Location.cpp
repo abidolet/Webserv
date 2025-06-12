@@ -16,7 +16,7 @@ void assertLocation(const Location& location, const Block& block)
 		throw std::runtime_error("cannot have only one cgi directive; " + block.block_name);
 }
 
-Location::Location(Block &block) : path("/var/www/html"), root("/"), index("index.html")
+Location::Location(Block &block) : path("/var/www/html"), root("/"), index("index.html"), is_cgi(false)
 {
 	setupLocationRoot(block);
 	block.loadSingleDirective("path", path);
@@ -24,7 +24,10 @@ Location::Location(Block &block) : path("/var/www/html"), root("/"), index("inde
 	block.loadSingleDirective("cgi_pass", cgi_pass);
 
 	assertLocation(*this, block);
+	if (!cgi_extension.empty())
+		is_cgi = true;
 }
+
 
 void Location::setupLocationRoot(const Block& block)
 {
