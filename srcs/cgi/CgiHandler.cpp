@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/12 14:04:37 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/12 15:12:48 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,7 +130,7 @@ std::string	CgiHandler::father()
 	int status;
     char buffer[1024];
 	ssize_t bytes_read;
-    std::string cgi_output = "HTTP/1.1 200 OK\n";
+    std::string cgi_output = HTTP_OK;
 
 	close(pipes.to_cgi[OUTPUT]);
     close(pipes.from_cgi[INPUT]);
@@ -150,10 +150,10 @@ std::string	CgiHandler::father()
 	if (WIFEXITED(status)) 
 	{
         if (WEXITSTATUS(status) != 0) 
-            return "HTTP/1.1 500\n";
+            return HTTP_500;
     }
 	else
-    	return "HTTP/1.1 500\n";
+    	return HTTP_500;
 	return cgi_output;
 }
 

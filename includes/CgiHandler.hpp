@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/11 13:10:11 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/12 15:11:52 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,9 @@
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
 #define	DEFAULT_SERVER_ROOT		"/home/ygille/42/www/"
+
+#define HTTP_OK					"HTTP/1.1 200 OK\n"
+#define HTTP_500				"HTTP/1.1 500 INTERNAL SERVER ERROR\n"
 
 /*	example URL
 	http://example.com/cgi-bin/script.cgi/extra/path/file.txt?key=value&foo=bar
