@@ -5,11 +5,13 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <filesystem>
 
-uint16_t Log::m_flags = F_LOG | F_DEBUG | F_WARNING | F_SUCCESS | F_ERROR | F_ALERT;
-std::ofstream Log::m_logFile;
+uint16_t		Log::m_flags = F_LOG | F_DEBUG | F_WARNING | F_SUCCESS | F_ERROR | F_ALERT;
+std::ofstream	Log::m_logFile;
+bool			Log::m_isLogFile = false;
 
-void Log::displayTimestamp(void)
+void Log::displayTimestamp()
 {
     std::time_t time = std::time(NULL);
 	std::tm		*tm = std::localtime(&time);
@@ -56,6 +58,7 @@ void Log::setupLogFile()
 	m_logFile.open(ss.str().c_str());
 	if (!m_logFile.is_open())
 		throw std::runtime_error("cannot open `" + ss.str() + "'");
+	m_isLogFile = true;
 }
 
 
@@ -130,7 +133,7 @@ Log& Log::operator<<<Log::endl>(const Log::endl& value)
 
 std::string Log::printCol(const std::string& col)
 {
-	return m_logFile.good() ? "" : col;
+	return m_isLogFile ? "" : col;
 }
 
 std::ostream& operator<<(std::ostream &stream, const Log::endl endl)

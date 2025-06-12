@@ -31,7 +31,7 @@ int main (int argc, char *argv[])
 
 	std::string	file;
 
-#if LOGFILE
+#if 0
 	Log::setupLogFile();
 #endif
 

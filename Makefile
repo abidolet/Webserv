@@ -54,7 +54,10 @@ leaks:
 	$(MAKE) MODE=debug all
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./webserv
 
-clean:
+clog:
+	rm -rf log_webserv_*
+
+clean: clog
 	rm -rf obj-*
 
 fclean: clean
@@ -62,7 +65,7 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all leaks clean fclean re debug leaks
+.PHONY: all clean fclean re debug leaks clog
 
 -include $(DEPS)
 .SILENT:

@@ -88,6 +88,7 @@ private:
 	Type					m_type;
 	static uint16_t			m_flags;
 	static std::ofstream	m_logFile;
+	static bool				m_isLogFile;
 
 public:
 
