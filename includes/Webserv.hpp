@@ -19,7 +19,7 @@ struct	HttpRequest
 struct 	Location
 {
 	Location()
-		: path("/var/www/html"), root("/"), index("index.html") { }
+		: path("/var/www/html"), root("/"), index("index.html"), is_cgi(false) { }
 	Location(Block& block);
 
 	std::string		path;
@@ -27,7 +27,9 @@ struct 	Location
 	std::string		index;
 	std::string		cgi_pass;
 	std::string		cgi_extension;
+	bool			is_cgi;
 
+	std::vector<std::string>	allowed_methods;
 private:
 	void	setupLocationRoot(const Block& block);
 
@@ -36,12 +38,14 @@ private:
 struct	Server
 {
 	Server()
-		: server_name("localhost"), client_max_body_size(0)
+		: root("/"), server_name("localhost"), client_max_body_size(0)
 	{
 		listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
 	}
 
 	void init(Block& block);
+
+	std::string					root;
 
 	std::string					server_name;
 	size_t						client_max_body_size;
