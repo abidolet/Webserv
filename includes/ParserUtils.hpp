@@ -1,7 +1,9 @@
 #include <string>
 #include <vector>
 
-namespace Tools
+class Server;
+
+namespace Utils
 {
 
 	std::string strUnite(std::vector<std::string> strs, std::string separator);
@@ -19,5 +21,7 @@ namespace Tools
 	bool is_number(std::string str);
 
 	bool fileAccess(const std::string& path);
+
+	void printServConfig(Server serv);
 
 }

@@ -4,6 +4,7 @@
 # include <iostream>
 # include <vector>
 # include <map>
+# include "Block.hpp"
 
 #include "CgiHandler.hpp"
 
@@ -15,25 +16,32 @@ struct	HttpRequest
 	std::map<std::string, std::string>	headers;
 };
 
-struct	Location
+struct 	Location
 {
 	Location()
 		: path("/var/www/html"), root("/"), index("index.html") { }
+	Location(Block& block);
 
-		std::string		path;
-		std::string		root;
-		std::string		index;
-		std::string		cgi_pass;
-		std::string		cgi_extension;
+	std::string		path;
+	std::string		root;
+	std::string		index;
+	std::string		cgi_pass;
+	std::string		cgi_extension;
+
+private:
+	void	setupLocationRoot(const Block& block);
+
 };
 
 struct	Server
 {
-	Server() // TODO: penser a recheck les valeur
+	Server()
 		: server_name("localhost"), client_max_body_size(0)
 	{
 		listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
 	}
+
+	void init(Block& block);
 
 	std::string					server_name;
 	size_t						client_max_body_size;
@@ -43,6 +51,12 @@ struct	Server
 
 	std::map<int, std::string>	error_pages;
 	std::map<std::string, int>	listen;
+
+private:
+	void	setupMaxBodySize(Block& block);
+	void	setupRedirections(Block& block);
+	void	setupListen(Block &block);
+
 };
 
 class	Webserv

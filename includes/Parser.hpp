@@ -23,7 +23,7 @@ public:
 	Server	populateServerInfos();
 
 private:
-	Block	loadBlock(std::vector<std::string>::iterator& it, std::string name);
+	Block	loadBlock(std::vector<std::string>::iterator& it, const std::string &name);
 	void	parseBlock();
 	void	loadFile();
 

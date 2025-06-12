@@ -5,10 +5,10 @@ OBJ_DIR = obj-$(MODE)
 INCLUDES = -Iincludes
 
 CXX = g++
-CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D COLORS -std=c++98
+CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98
 
 ifeq ($(MODE), debug)
-	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D COLORS -g3 -std=c++98
+	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -g3 -std=c++98
 endif
 
 VPATH = srcs:srcs/parser:srcs/server:srcs/cgi
@@ -17,9 +17,12 @@ SRCS =	main.cpp		\
 		Webserv.cpp		\
 		Parser.cpp		\
 		Log.cpp			\
-		ParserTools.cpp	\
+		ParserUtils.cpp	\
 		Block.cpp		\
 		CgiHandler.cpp	\
+		Server.cpp		\
+		Location.cpp	\
+
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
 DEPS = $(OBJS:.o=.d)

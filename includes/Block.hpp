@@ -13,7 +13,7 @@ public:
 	std::vector<std::string>	loadDirectives(const std::string& keyword);
 	void						loadSingleDirective(const std::string& keyword, std::string& ref);
 
-	bool blockAssert(std::vector<std::string> shouldBeFound, std::string blockName);
+	bool blockAssert(const std::vector<std::string> &shouldBeFound, const std::string &blockName);
 
 
 	std::string					block_name;

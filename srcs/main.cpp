@@ -23,6 +23,13 @@ void	handle_signal(int signal)
 	throw std::runtime_error("exit");
 }
 
+class foo
+{
+public:
+	foo() {std::cout << "creer" << std::endl;}
+	~foo() {std::cout << "detruit" << std::endl;}
+};
+
 int main (int argc, char *argv[])
 {
 	signal(SIGINT, handle_signal);
@@ -64,5 +71,7 @@ int main (int argc, char *argv[])
 	}
 	return (0);
 }
+
+
 
 

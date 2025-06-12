@@ -1,6 +1,6 @@
 #include "Block.hpp"
 #include "Parser.hpp"
-#include "ParserTools.hpp"
+#include "ParserUtils.hpp"
 
 std::vector<std::string> Block::loadDirectives(const std::string& keyword)
 {
@@ -30,17 +30,17 @@ void Block::loadSingleDirective(const std::string &keyword, std::string& ref)
     ref = found[0];
 }
 
-bool Block::blockAssert(std::vector<std::string> shouldBeFound, std::string blockName)
+bool Block::blockAssert(const std::vector<std::string> &shouldBeFound, const std::string &blockName)
 {
     std::vector<Block>::iterator block = inners.begin();
-    while (block != inners.end())
+    for ( ; block != inners.end(); ++block)
     {
         if (block->block_name.substr(0, block->block_name.find(" ")) != blockName)
             throw Parser::InvalidArgumentException(block->block_name, blockName);
 
-        std::vector<std::string>::iterator it = block->directives.begin();
         std::string	firstWord;
-        while (it != block->directives.end())
+        std::vector<std::string>::iterator it = block->directives.begin();
+        for ( ; it != block->directives.end(); ++it)
         {
             firstWord = it->substr(0, it->find(" "));
 
@@ -51,11 +51,8 @@ bool Block::blockAssert(std::vector<std::string> shouldBeFound, std::string bloc
                     break;
             }
             if (i == shouldBeFound.size())
-                throw Parser::InvalidArgumentException(firstWord, Tools::findClosest(firstWord, shouldBeFound));
-
-            ++it;
+                throw Parser::InvalidArgumentException(firstWord, Utils::findClosest(firstWord, shouldBeFound));
         }
-        ++block;
     }
 
     return true;

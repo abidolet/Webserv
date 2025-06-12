@@ -1,9 +1,11 @@
-#include "ParserTools.hpp"
-#include <cmath>
-#include "fstream"
-#include <iostream>
+#include "ParserUtils.hpp"
+#include "Webserv.hpp"
+#include "Log.hpp"
 
-namespace Tools
+#include <cmath>
+#include <fstream>
+
+namespace Utils
 {
 	bool	should_add_line(std::string line)
 	{
@@ -99,38 +101,6 @@ namespace Tools
 		return options[idx];
 	}
 
-#if OLD
-	// TODO: pour le closest a la place do calculer la value total de la str, juste calculer la diff entre chaque lettre, comme ca abc plus proche de abd que cba 
-	// TODO  dans le system acutel abc == cba vu que y'a les meme lettres
-	std::string findClosest(std::string str, std::vector<std::string> options)
-	{
-		std::string result;
-		int bestMatch = 9999;
-
-		std::vector<std::string>::iterator it = options.begin();
-		for ( ; it != options.end(); ++it)
-		{
-			int totalDiff = 0;
-
-			size_t i = 0;
-			while (i < str.size() || i < it->size())
-			{
-				if (i < str.size() && i < it->size())
-					totalDiff += abs(tolower((*it)[i]) - tolower(str[i]));
-
-				i++;
-			}
-			if (totalDiff < bestMatch)
-			{
-				bestMatch = totalDiff;
-				result = *it;
-			}
-		}
-
-		return result;
-	}
-#endif
-
 	std::string toLower(std::string str)
 	{
 		for (size_t i = 0; i < str.size(); i++)
@@ -185,5 +155,50 @@ namespace Tools
 		std::ifstream stream;
 		stream.open(path.c_str());
 		return !stream.fail();
+	}
+
+	void printServConfig(Server serv)
+	{
+		Log(Log::DEBUG) << "server config:" << Log::endl();
+		Log(Log::DEBUG) << "\t|-> server_name:" << serv.server_name << Log::endl();
+		Log(Log::DEBUG) << "\t|-> client_max_body_size:" << serv.client_max_body_size << Log::endl();
+		Log(Log::DEBUG) << "\t|-> allowed methods:" << Utils::strUnite(serv.allowed_methods, ",") << Log::endl();
+
+		// printing redirections
+		{
+			Log(Log::DEBUG) << "\t|->" << serv.error_pages.size() << "error_pages" << Log::endl();
+			std::map<int, std::string>::iterator it = serv.error_pages.begin();
+			for ( ; it != serv.error_pages.end(); ++it)
+			{
+				Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();
+			}
+		}
+
+		// printing listens
+		{
+			Log(Log::DEBUG) << "\t|->" << serv.listen.size() << "listens" << Log::endl();
+			std::map<std::string, int>::iterator it = serv.listen.begin();
+			for ( ; it != serv.listen.end(); ++it)
+			{
+				Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();
+			}
+		}
+
+		// printing each location
+		{
+			Log(Log::DEBUG) << "\t|" << Log::endl();
+			Log(Log::DEBUG) << "\t|->" << serv.locations.size() << "locations" << Log::endl();
+			std::vector<Location>::iterator it = serv.locations.begin();
+			for ( ; it != serv.locations.end(); ++it)
+			{
+				Log(Log::DEBUG) << "\t|---- locations:" << it->root << Log::endl();
+				Log(Log::DEBUG) << "\t|\t|-> path:" << it->path << Log::endl();
+				Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
+				Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
+
+				Log(Log::DEBUG) << "\t|\t|-> cgi pass: [" << it->cgi_pass << "]" << Log::endl();
+				Log(Log::DEBUG) << "\t|\t|-> cgi extension: [" << it->cgi_extension << "]" << Log::endl();
+			}
+		}
 	}
 }

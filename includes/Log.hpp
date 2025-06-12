@@ -1,7 +1,10 @@
 #ifndef LOG_HPP
 # define LOG_HPP
 
-# ifdef  COLORS
+#include <sstream>
+#include <stdint.h>
+
+# ifdef  PRETTY_LOGGER
 # define RESET		"\033[0m"
 # define BLACK		"\033[0;30m"
 # define RED		"\033[0;31m"
@@ -48,9 +51,6 @@
 
 #endif
 
-#include <sstream>
-#include <stdint.h>
-
 #define F_LOG		0b000001
 #define F_DEBUG		0b000010
 #define F_WARNING	0b000100
@@ -78,10 +78,7 @@ public:
 		ALERT,
 	};
 
-	class endl
-	{
-
-	};
+	class endl { };
 
 private:
 	std::ostringstream		m_oss;
@@ -92,7 +89,7 @@ private:
 
 public:
 
-	Log(Log::Type = Log::LOG);
+	Log(Type = LOG);
 	void displayTimestamp();
 
 	static void setFlags(uint16_t flags);
