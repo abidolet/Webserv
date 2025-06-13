@@ -8,6 +8,10 @@
 
 #include "CgiHandler.hpp"
 
+#ifndef RUN_SERV_SELF_CHECK
+# define RUN_SERV_SELF_CHECK 0
+#endif
+
 struct	HttpRequest
 {
 	std::string							method;
@@ -19,7 +23,7 @@ struct	HttpRequest
 struct 	Location
 {
 	Location()
-		: path("/var/www/html"), root("/"), index("index.html"), is_cgi(false) { }
+		: path("/"), root("/"), index("index.html"), is_cgi(false) { }
 	Location(Block& block);
 
 	std::string		path;
@@ -43,7 +47,10 @@ struct	Server
 		listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
 	}
 
-	void init(Block& block);
+	void		init(Block& block);
+	void		runSelfCheck();
+
+	Location *searchLocationByName(const std::string &name);
 
 	std::string					root;
 

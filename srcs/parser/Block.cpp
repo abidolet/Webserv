@@ -57,3 +57,17 @@ bool Block::blockAssert(const std::vector<std::string> &shouldBeFound, const std
 
     return true;
 }
+
+Block* Block::searchBlockByName(const std::string& name)
+{
+    std::vector<Block>::iterator it = inners.begin();
+    for ( ; it != inners.end(); ++it)
+    {
+        if (it->block_name == name)
+            return &(*it);
+
+
+
+    }
+    return NULL;
+}

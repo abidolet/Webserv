@@ -15,6 +15,35 @@ void Server::init(Block &block)
 	setupRedirections(block);
 }
 
+void checkDirAccess(const std::string& path)
+{
+	if (Utils::dirAccess(path))
+		return;
+	throw Parser::InvalidDirOrFileException(path);
+}
+
+void Server::runSelfCheck()
+{
+	checkDirAccess(root);
+	std::map<int, std::string>::iterator it = error_pages.begin();
+	for ( ; it != error_pages.end(); ++it)
+	{
+		if (Utils::fileAccess(it->second) == false)
+			throw Parser::InvalidDirOrFileException(it->second);
+	}
+}
+
+Location* Server::searchLocationByName(const std::string& name)
+{
+	std::vector<Location>::iterator it = locations.begin();
+	for ( ; it != locations.end(); ++it)
+	{
+		if (it->root == name)
+			return &(*it);
+	}
+	return NULL;
+}
+
 void Server::setupMaxBodySize(Block& block)
 {
 	std::vector<std::string> found = block.loadDirectives("client_max_body_size");

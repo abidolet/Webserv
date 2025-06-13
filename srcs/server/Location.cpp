@@ -57,4 +57,3 @@ void Location::setupLocationRoot(const Block& block)
 		root = split[2];
 	}
 }
-
