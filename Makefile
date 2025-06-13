@@ -4,7 +4,7 @@ MODE ?= release
 OBJ_DIR = obj-$(MODE)
 INCLUDES = -Iincludes
 
-CXX = g++
+CXX = c++
 CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98
 
 ifeq ($(MODE), debug)
