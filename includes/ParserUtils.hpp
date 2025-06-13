@@ -1,7 +1,7 @@
 #include <string>
 #include <vector>
 
-class Server;
+struct Server;
 
 namespace Utils
 {
