@@ -21,6 +21,7 @@ namespace Utils
 	bool is_number(std::string str);
 
 	bool fileAccess(const std::string& path);
+	bool dirAccess(const std::string& path);
 
 	void printServConfig(Server serv);
 

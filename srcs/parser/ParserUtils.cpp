@@ -3,6 +3,7 @@
 #include "Log.hpp"
 
 #include <cmath>
+#include <dirent.h>
 #include <fstream>
 
 namespace Utils
@@ -158,6 +159,17 @@ namespace Utils
 		bool value = !stream.fail();
 		stream.close();
 		return value;
+	}
+
+	bool dirAccess(const std::string& path)
+	{
+		DIR* dir = opendir(path.c_str());
+		if (dir)
+		{
+			closedir(dir);
+			return true;
+		}
+		return false;
 	}
 
 	void printServConfig(Server serv)

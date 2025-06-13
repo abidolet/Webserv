@@ -27,6 +27,8 @@ private:
 	void	parseBlock();
 	void	loadFile();
 
+	std::string	joinPath(Server &serv, const std::string &path, std::string locationName);
+
 private:
 	std::vector<std::string>	m_file;
 	Block						m_block;
@@ -85,6 +87,22 @@ public:
 	private:
 		std::string m_directive;
 		Block m_block;
+	};
+
+	class InvalidDirOrFileException : public std::exception
+	{
+	public:
+		const char* what() const throw()
+		{
+			static std::string error = "`" + m_path + "' No such file or directory";
+			return error.c_str();
+		}
+
+		virtual ~InvalidDirOrFileException() throw() {}
+		InvalidDirOrFileException(const std::string& path) : m_path(path) {}
+
+	private:
+		std::string m_path;
 	};
 };
 

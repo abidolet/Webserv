@@ -14,7 +14,6 @@ Parser::Parser(const std::string& filepath)
 		throw std::runtime_error("cannot open " + filepath);
 	m_file = Utils::read_file(m_stream);
 	Log(Log::SUCCESS) << filepath << "is loaded!" << Log::endl();
-	
 	parseBlock();
 }
 
@@ -22,6 +21,28 @@ void Parser::parseBlock()
 {
 	std::vector<std::string>::iterator it = m_file.begin();
 	m_block = loadBlock(it, "root");
+}
+
+std::string Parser::joinPath(Server& serv, const std::string &path, std::string locationName)
+{
+	Location* location = serv.searchLocationByName(locationName);
+
+	std::string to_add;
+	if (location == NULL)
+	{
+		if (serv.root[serv.root.size() - 1] == '/')
+			to_add = serv.root.substr(0, serv.root.size() - 1);
+		else
+			to_add = serv.root;
+	}
+	else
+	{
+		if (location->path[location->path.size() - 1] == '/')
+			to_add = location->path.substr(0, location->path.size() - 1);
+		else
+			to_add = location->path;
+	}
+	return to_add + path;
 }
 
 Block Parser::loadBlock(std::vector<std::string>::iterator& it, const std::string &_name)
@@ -120,10 +141,21 @@ Server Parser::populateServerInfos()
 		serv.init(*it);
 		serv.allowed_methods = setupAllowedMethods(*it);
 		serv.locations = populateLocationInfos(*it);
+
+		std::map<int, std::string>::iterator page = serv.error_pages.begin();
+		for ( ; page != serv.error_pages.end(); ++page)
+		{
+			page->second = joinPath(serv, page->second, page->second);
+		}
 	}
 
 	Utils::printServConfig(serv);
 	std::cout << std::endl;
+
+
+#if RUN_SERV_SELF_CHECK
+	serv.runSelfCheck();
+#endif
 
 	Log(Log::SUCCESS) << m_filepath << " was parsed successfuly" << Log::endl();
 	return serv;
