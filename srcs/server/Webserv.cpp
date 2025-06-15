@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <stdlib.h>
+#include <algorithm>
 
 #define MAX_EVENTS 1024
 #define CLOSE(fd) if (fd > 1) close(fd)
@@ -27,6 +28,69 @@ Webserv::~Webserv()
 {
 	CLOSE(_epoll_fd);
 	CLOSE(_listener_fd);
+}
+
+std::string	toString(int value)
+{
+	std::ostringstream oss;
+	oss << value;
+	return (oss.str());
+}
+
+std::string Webserv::getErrorPage(int error_code) const
+{
+	const Server&	server = _servers[0];
+	std::map<int, std::string>::const_iterator it = server.error_pages.find(error_code);
+
+	if (it != server.error_pages.end())
+	{
+		Log(Log::DEBUG) << "Custom error page for code " << error_code << ": " << it->second << Log::endl();
+
+		std::string		error_path = it->second;
+		std::ifstream	file(error_path.c_str(), std::ios::binary);
+
+		if (file)
+		{
+			Log(Log::DEBUG) << "Custom error page found: " << error_path << Log::endl();
+
+			std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+			std::ostringstream	oss;
+			oss << content.size();
+
+			return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
+				"Content-Type: text/html\r\n" +
+				"Content-Length: " + oss.str() + "\r\n\r\n" +
+				content);
+		}
+		else
+		{
+			Log(Log::DEBUG) << "Custom error page not found: " << error_path << Log::endl();
+		}
+	}
+
+	std::ostringstream	oss;
+	oss << error_code;
+	std::string	default_content = "<html><body><h1>" + oss.str() + " " +
+								getStatusMessage(error_code) + "</h1></body></html>";
+
+	oss.str("");
+	oss << default_content.size();
+
+	return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
+		"Content-Type: text/html\r\n" +
+		"Content-Length: " + oss.str() + "\r\n\r\n" +
+		default_content);
+}
+
+std::string Webserv::getStatusMessage(int code) const
+{
+	switch(code)
+	{
+		case 403:	return ("Forbidden");
+		case 404:	return ("Not Found");
+		case 405:	return ("Method Not Allowed");
+		default:	return ("Error");
+	}
 }
 
 HttpRequest	parseRequest(const std::string& rawRequest)
@@ -67,74 +131,70 @@ HttpRequest	parseRequest(const std::string& rawRequest)
 	return (request);
 }
 
-std::string	handleGetRequest(std::string& path)
+std::string	Webserv::handleGetRequest(std::string& path) const
 {
-	Log() << "Get request for: " << path << Log::endl();
+	Log(Log::DEBUG) << "Get request for: " << path << Log::endl();
+
+	size_t	start = path.find_first_not_of(" \t");
+	if (start != std::string::npos)
+	{
+		path = path.substr(start);
+	}
+
+	size_t	end = path.find_last_not_of(" \t");
+	if (end != std::string::npos)
+	{
+		path = path.substr(0, end + 1);
+	}
+
+	Log(Log::DEBUG) << "Get request trimmed: " << path << Log::endl();
+
+	std::string	full_path = _servers[0].root + path;
 
 	if (path.empty() || path == "/")
 	{
-		path = "www/index.html";
-	}
-	if (path[0] == '/')
-	{
-		path = path.substr(1);
-	}
-	if (!path.empty() && path[path.size() - 1] == '/')
-	{
-		path += "www/index.html";
+		const Server& server = _servers[0];
+		for (size_t	i = 0; i < server.locations.size(); ++i)
+		{
+			if (server.locations[i].root == path)
+			{
+				full_path = server.locations[i].path + '/' + server.locations[i].index;
+				break ;
+			}
+		}
 	}
 
-	Log() << "Trying to access to: " << path << Log::endl();
+	Log(Log::DEBUG) << "Get request final: " << full_path << Log::endl();
 
 	struct stat	statbuf;
-	if (stat(path.c_str(), &statbuf) != 0)
+	if (stat(full_path.c_str(), &statbuf) != 0)
 	{
-		Log(Log::ERROR) << "File not found:" << path << Log::endl();
-		return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");
+		Log(Log::ERROR) << "File not found: '" << full_path << "'" << Log::endl();
+		return (getErrorPage(404));
 	}
 
-	if (S_ISDIR(statbuf.st_mode))
+	Log(Log::DEBUG) << "File found: '" << full_path << "'" << Log::endl();
+
+	std::ifstream	file(full_path.c_str(), std::ios::binary);
+	if (!file)
 	{
-		path += "/www/index.html";
-		if (stat(path.c_str(), &statbuf) != 0)
-		{
-			Log(Log::ERROR) << "Directory index not found:" << path << Log::endl();
-			return ("HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");
-		}
+		Log(Log::ERROR) << "Cannot open " << file << Log::endl();
+		return (getErrorPage(403));
 	}
 
-	std::ifstream	file(path.c_str(), std::ios::binary);
-	if (file.good())
-	{
-		std::string	content;
-		char		buffer[4096];
-		while (file.read(buffer, sizeof(buffer)))
-		{
-			content.append(buffer, file.gcount());
-		}
-		content.append(buffer, file.gcount());
+	std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	std::ostringstream	oss;
+	oss << content.size();
 
-		std::ostringstream	oss;
-		oss << content.size();
-		std::string	content_length = oss.str();
+	std::string	response = "HTTP/1.1 200 OK\r\n";
+	response += "Content-Type: text/html\r\n";
+	response += "Content-Length: " + oss.str() + "\r\n\r\n";
+	response += content;
 
-		std::string	response = "HTTP/1.1 200 OK\r\n";
-		response += "Content-Type: text/html\r\n";
-		response += "Content-Length: " + content_length + "\r\n";
-		response += "\r\n" + content;
-
-		Log(Log::SUCCESS) << "File served successfully: " << path << Log::endl();
-
-		return (response);
-	}
-	else
-	{
-		Log(Log::ERROR) << "Failed to open file: " << path << Log::endl();
-		return ("HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 0\r\n\r\n");
-	}
+	return (response);
 }
 
-std::string	handlePostRequest(std::string body)
+std::string	Webserv::handlePostRequest(const std::string& body) const
 {
 	std::ostringstream	oss;
 	oss << body.size();
@@ -152,11 +212,18 @@ std::string	handlePostRequest(std::string body)
 	return (response);
 }
 
-std::string	handleDeleteRequest(const std::string& request)
+std::string	Webserv::handleDeleteRequest(const std::string& request) const
 {
 	std::string	path = "www" + request;
 
 	Log() << "Delete request for: " << path << Log::endl();
+
+	struct stat	statbuf;
+	if (stat(path.c_str(), &statbuf) != 0)
+	{
+		Log(Log::ERROR) << "File not found: '" << path << "'" << Log::endl();
+		return (getErrorPage(404));
+	}
 
 	if (remove(path.c_str()) == 0)
 	{
@@ -165,11 +232,8 @@ std::string	handleDeleteRequest(const std::string& request)
 	}
 	else
 	{
-		Log(Log::ERROR) << "Failed to delete " << path << Log::endl();
-		return ("HTTP/1.1 403 Forbidden\r\n"
-			"Content-Type: text/plain\r\n"
-			"Content-Length: 25\r\n\r\n"
-			"Could not delete file :(\n");
+		Log(Log::ERROR) << "Cannot delete " << path << Log::endl();
+		return (getErrorPage(403));
 	}
 }
 
@@ -228,6 +292,9 @@ void Webserv::run()
 
 	struct epoll_event	events[MAX_EVENTS];
 	int					nfds;
+	bool				getAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "GET"));
+	bool				postAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "POST"));
+	bool				deleteAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "DELETE"));
 
 	while (true)
 	{
@@ -284,24 +351,48 @@ void Webserv::run()
 					HttpRequest	httpReq = parseRequest(request);
 					CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
 					std::string	response;
-					
+
 					if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
-					{ 
+					{
 						// if (contentLength != 0) cgi.addBody();
 						Log(Log::LOG) << "launching cgi" << Log::endl();
 						response = cgi.launch();
 					}
 					else if (httpReq.method == "GET")
 					{
-						response = handleGetRequest(httpReq.path);
+						if (!getAllowed)
+						{
+							Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
+							response = getErrorPage(405);
+						}
+						else
+						{
+							response = handleGetRequest(httpReq.path);
+						}
 					}
 					else if (httpReq.method == "POST")
 					{
-						response = handlePostRequest(httpReq.body);
+						if (!postAllowed)
+						{
+							Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
+							response = getErrorPage(405);
+						}
+						else
+						{
+							response = handlePostRequest(httpReq.body);
+						}
 					}
 					else if (httpReq.method == "DELETE")
 					{
-						response = handleDeleteRequest(httpReq.path);
+						if (!deleteAllowed)
+						{
+							Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
+							response = getErrorPage(405);
+						}
+						else
+						{
+							response = handleDeleteRequest(httpReq.path);
+						}
 					}
 
 					ssize_t	bytes_sent = send(events[n].data.fd, response.c_str(), response.size(), 0);
