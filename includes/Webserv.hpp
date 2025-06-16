@@ -89,16 +89,18 @@ class	Webserv
 
 		std::string			cookies;
 
-		// HttpRequest	parseRequest(const std::string& rawRequest);
-		// std::string	handleGetRequest(const std::string& request);
-		// std::string	handlePostRequest(void);
-		// std::string	handleDeleteRequest(const std::string& request);
-
 	public:
 		Webserv(const std::string& file);
 		~Webserv();
 
 		void	run();
+
+		std::string	handleGetRequest(std::string& path) const;
+		std::string	handlePostRequest(const std::string& body) const;
+		std::string	handleDeleteRequest(const std::string& request) const;
+
+		std::string	getErrorPage(int error_code) const;
+		std::string	getStatusMessage(int code) const;
 };
 
 #endif
