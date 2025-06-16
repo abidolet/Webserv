@@ -86,8 +86,9 @@ class	Webserv
 	private:
 		std::vector<Server>	_servers;
 
-		int					_epoll_fd;
-		std::vector<int>	_listener_fds;
+		int								_epoll_fd;
+		std::vector<int>				_listener_fds;
+		std::map<int, int>				_client_to_server;
 
 		std::string			cookies;
 

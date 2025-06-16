@@ -15,7 +15,7 @@
 #include <algorithm>
 
 #define MAX_EVENTS 1024
-#define CLOSE(fd) if (fd > 1) close(fd)
+#define CLOSE(fd) if (fd > 1) {close(fd); fd = -1;}
 
 Webserv::Webserv(const std::string& file)
 	: _servers(), _epoll_fd(-1), _listener_fds()
@@ -47,14 +47,14 @@ std::string Webserv::getErrorPage(int error_code) const
 
 	if (it != server.error_pages.end())
 	{
-		Log(Log::DEBUG) << "Custom error page for code " << error_code << ": " << it->second << Log::endl();
+		Log(Log::DEBUG) << "Searching custom error page for code" << error_code << ":" << it->second << Log::endl();
 
 		std::string		error_path = it->second;
 		std::ifstream	file(error_path.c_str(), std::ios::binary);
 
 		if (file)
 		{
-			Log(Log::DEBUG) << "Custom error page found: " << error_path << Log::endl();
+			Log(Log::DEBUG) << "Custom error page found:" << error_path << Log::endl();
 
 			std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 			std::ostringstream	oss;
@@ -67,7 +67,7 @@ std::string Webserv::getErrorPage(int error_code) const
 		}
 		else
 		{
-			Log(Log::DEBUG) << "Custom error page not found: " << error_path << Log::endl();
+			Log(Log::DEBUG) << "Custom error page not found:" << error_path << Log::endl();
 		}
 	}
 
@@ -136,48 +136,39 @@ HttpRequest	parseRequest(const std::string& rawRequest)
 
 std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) const
 {
-	Log(Log::DEBUG) << "Get request for: " << path << Log::endl();
+	Log(Log::DEBUG) << "Get request for:" << path << Log::endl();
 
-	size_t	start = path.find_first_not_of(" \t");
-	if (start != std::string::npos)
+	std::string	to_find = "/";
+	std::string::size_type	pos = path.find_last_of("/");
+	if (pos != std::string::npos && pos != 0)
 	{
-		path = path.substr(start);
+		to_find = path.substr(0, pos);
 	}
-
-	size_t	end = path.find_last_not_of(" \t");
-	if (end != std::string::npos)
-	{
-		path = path.substr(0, end + 1);
-	}
-
-	Log(Log::DEBUG) << "Get request trimmed: " << path << Log::endl();
+	Log(Log::DEBUG) << "Searching for location with path:" << to_find << Log::endl();
 
 	for (size_t	i = 0; i < server.locations.size(); ++i)
 	{
-		size_t		slash_pos = path.find('/', 1);
-		std::string	path_part = (slash_pos != std::string::npos) ? path.substr(0, slash_pos) : path;
-		Log(Log::DEBUG) << "Checking location: " << server.locations[i].root << " | " << path_part << Log::endl();
-
-		if (server.locations[i].root == path_part)
+		Log(Log::DEBUG) << "Checking location:" << server.locations[i].root << Log::endl();
+		if (server.locations[i].root == to_find)
 		{
-			Log(Log::DEBUG) << "Location matched: " << server.locations[i].path << Log::endl();
-			path = server.locations[i].path + '/' + server.locations[i].index;
+			Log(Log::DEBUG) << "Location found for path:" << to_find << Log::endl();
+			path = server.locations[i].path + path.substr(pos);
 			break ;
 		}
 	}
 
 	std::string		full_path = server.root + path;
 
-	Log(Log::DEBUG) << "Get request final: " << full_path << Log::endl();
+	Log(Log::DEBUG) << "Get request final:" << full_path << Log::endl();
 
 	struct stat	statbuf;
 	if (stat(full_path.c_str(), &statbuf) != 0)
 	{
-		Log(Log::ERROR) << "File not found: '" << full_path << "'" << Log::endl();
+		Log(Log::ERROR) << "File not found:'" << full_path << "'" << Log::endl();
 		return (getErrorPage(404));
 	}
 
-	Log(Log::DEBUG) << "File found: '" << full_path << "'" << Log::endl();
+	Log(Log::DEBUG) << "File found:'" << full_path << "'" << Log::endl();
 
 	std::ifstream	file(full_path.c_str(), std::ios::binary);
 	if (!file)
@@ -248,27 +239,24 @@ void Webserv::run()
 	_epoll_fd = epoll_create(10);
 	if (_epoll_fd == -1)
 	{
-		Log(Log::ALERT) << "Failed to create epoll instance" << Log::endl();
-		return ;
+		throw std::runtime_error("Failed to create epoll instance:");
 	}
 
-	std::cout << "Webserv started on " << _servers.size() << " server(s)" << std::endl;
+	Log(Log::DEBUG) << "Webserv started on" << _servers.size() << "server(s)" << Log::endl();
 
 	for (size_t i = 0; i < _servers.size(); ++i)
 	{
-		Log(Log::DEBUG) << "Server " << i << " initialized" << Log::endl();
+		Log(Log::DEBUG) << "Initializing server" << i << Log::endl();
 		int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (listener_fd < 0)
 		{
-			Log(Log::ALERT) << "Failed to create socket" << Log::endl();
-			return ;
+			throw std::runtime_error("Failed to create socket:");
 		}
 
 		int	opt = 1;
 		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 		{
-			Log(Log::ALERT) << "setsockopt failed" << Log::endl();
-			return ;
+			throw std::runtime_error("setsockopt failed:");
 		}
 
 		struct sockaddr_in	server_addr;
@@ -278,16 +266,12 @@ void Webserv::run()
 
 		if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
 		{
-			perror("bind");
-			Log(Log::ALERT) << "bind failed" << Log::endl();
-			CLOSE(listener_fd);
-			return ;
+			throw std::runtime_error("bind failed:");
 		}
 
 		if (listen(listener_fd, SOMAXCONN) == -1)
 		{
-			Log(Log::ALERT) << "listen failed" << Log::endl();
-			return ;
+			throw std::runtime_error("listen failed:");
 		}
 
 		struct epoll_event	ev;
@@ -295,129 +279,153 @@ void Webserv::run()
 		ev.data.fd = listener_fd;
 		if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, listener_fd, &ev) == -1)
 		{
-			Log(Log::ALERT) << "epoll_ctl failed" << Log::endl();
-			return ;
+			throw std::runtime_error("epoll_ctl failed:");
 		}
 
 		_listener_fds.push_back(listener_fd);
 	}
 
 	struct epoll_event	events[MAX_EVENTS];
-	int					nfds;
-	bool				getAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "GET"));
-	bool				postAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "POST"));
-	bool				deleteAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "DELETE"));
 
 	while (true)
 	{
-		nfds = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
+		int	nfds = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
 		if (nfds == -1)
 		{
-			Log(Log::ERROR) << "epoll_wait failed" << Log::endl();
+			Log(Log::ERROR) << "epoll_wait failed:" << strerror(errno) << Log::endl();
 			continue ;
 		}
 
-		for (unsigned int i = 0; i < _listener_fds.size(); ++i)
+		for (int n = 0; n < nfds; ++n)
 		{
-			for (int n = 0; n < nfds; ++n)
+			int	fd = events[n].data.fd;
+			std::vector<int>::iterator	it = std::find(_listener_fds.begin(), _listener_fds.end(), fd);
+
+			if (it != _listener_fds.end())
 			{
-				if (events[n].data.fd == _listener_fds[i])
+				int	client = accept(fd, NULL, NULL);
+				if (client < 0)
 				{
-					int	client = accept(_listener_fds[i], NULL, NULL);
-					if (client < 0)
-					{
-						Log(Log::ERROR) << "accept failed" << Log::endl();
-						continue ;
-					}
-
-					if (fcntl(client, F_SETFL, O_NONBLOCK | FD_CLOEXEC) == -1)
-					{
-						CLOSE(client);
-						continue ;
-					}
-
-					struct epoll_event	ev;
-					ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-					ev.data.fd = client;
-					if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client, &ev) == -1)
-					{
-						Log(Log::ERROR) << "epoll_ctl for client failed" << Log::endl();
-						CLOSE(client);
-					}
+					Log(Log::ERROR) << "accept failed:" << strerror(errno) << Log::endl();
+					continue ;
 				}
-				else
+
+				if (fcntl(client, F_SETFL, O_NONBLOCK | FD_CLOEXEC) == -1)
 				{
-					if (events[n].events & EPOLLRDHUP)
+					CLOSE(client);
+					continue ;
+				}
+
+				struct epoll_event	client_ev;
+				client_ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+				client_ev.data.fd = client;
+				if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client, &client_ev) == -1)
+				{
+					Log(Log::ERROR) << "epoll_ctl for client failed:" << strerror(errno) << Log::endl();
+					CLOSE(client);
+				}
+				continue ;
+			}
+			else
+			{
+				if (events[n].events & (EPOLLRDHUP | EPOLLHUP))
+				{
+					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+					CLOSE(fd);
+				}
+				else if (events[n].events & EPOLLIN)
+				{
+					char		buffer[4096];
+					ssize_t		bytes_read;
+					std::string	request;
+
+					while ((bytes_read = recv(fd, buffer, sizeof(buffer), 0)) > 0)
 					{
-						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, NULL);
-						CLOSE(events[n].data.fd);
+						request.append(buffer, bytes_read);
 					}
-					else if (events[n].events & EPOLLIN)
+
+					if (bytes_read == -1 && errno != EAGAIN)
 					{
-						char		buffer[4096];
-						ssize_t		bytes_read;
-						std::string	request;
-
-						while ((bytes_read = recv(events[n].data.fd, buffer, sizeof(buffer), 0)) > 0)
-						{
-							request.append(buffer, bytes_read);
-						}
-
-						HttpRequest	httpReq = parseRequest(request);
-						CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
-						std::string	response;
-
-						if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
-						{
-							// if (contentLength != 0) cgi.addBody();
-							Log(Log::LOG) << "launching cgi" << Log::endl();
-							response = cgi.launch();
-						}
-						else if (httpReq.method == "GET")
-						{
-							if (!getAllowed)
-							{
-								Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
-								response = getErrorPage(405);
-							}
-							else
-							{
-								response = handleGetRequest(_servers[i], httpReq.path);
-							}
-						}
-						else if (httpReq.method == "POST")
-						{
-							if (!postAllowed)
-							{
-								Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
-								response = getErrorPage(405);
-							}
-							else
-							{
-								response = handlePostRequest(httpReq.body);
-							}
-						}
-						else if (httpReq.method == "DELETE")
-						{
-							if (!deleteAllowed)
-							{
-								Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
-								response = getErrorPage(405);
-							}
-							else
-							{
-								response = handleDeleteRequest(httpReq.path);
-							}
-						}
-
-						if (send(events[n].data.fd, response.c_str(), response.size(), 0) == -1)
-						{
-							Log(Log::ERROR) << "send error" << Log::endl();
-						}
-
-						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, NULL);
-						CLOSE(events[n].data.fd);
+						Log(Log::ERROR) << "recv error: " << strerror(errno) << Log::endl();
+						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+						CLOSE(fd);
+						continue ;
 					}
+
+					HttpRequest	httpReq = parseRequest(request);
+					CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
+					std::string	response;
+
+					struct sockaddr_in	addr;
+					socklen_t			addr_len = sizeof(addr);
+					getsockname(fd, (struct sockaddr*)&addr, &addr_len);
+					uint16_t			port = ntohs(addr.sin_port);
+
+					Server*	server = NULL;
+					for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
+					{
+						Server& s = *s_it;
+						if (s.listen.begin()->second == port)
+						{
+							server = &s;
+							break ;
+						}
+					}
+
+					if (!server)
+					{
+						response = getErrorPage(500);
+					}
+					else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
+					{
+						// if (contentLength != 0) cgi.addBody();
+						Log(Log::LOG) << "launching cgi" << Log::endl();
+						response = cgi.launch();
+					}
+					else if (httpReq.method == "GET")
+					{
+						// if (!getAllowed)
+						// {
+						// 	Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
+						// 	response = getErrorPage(405);
+						// }
+						// else
+						// {
+							response = handleGetRequest(*server, httpReq.path);
+						// }
+					}
+					else if (httpReq.method == "POST")
+					{
+						// if (!postAllowed)
+						// {
+							// Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
+							// response = getErrorPage(405);
+						// }
+						// else
+						// {
+							response = handlePostRequest(httpReq.body);
+						// }
+					}
+					else if (httpReq.method == "DELETE")
+					{
+						// if (!deleteAllowed)
+						// {
+							// Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
+							// response = getErrorPage(405);
+						// }
+						// else
+						// {
+							response = handleDeleteRequest(httpReq.path);
+						// }
+					}
+
+					if (send(fd, response.c_str(), response.size(), 0) == -1)
+					{
+						Log(Log::ERROR) << "send error:" << strerror(errno) << Log::endl();
+					}
+
+					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+					CLOSE(fd);
 				}
 			}
 		}
