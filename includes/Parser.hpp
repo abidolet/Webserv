@@ -8,6 +8,13 @@
 
 #include "Block.hpp"
 
+// TODO
+// [~] directory listing
+// [~] http redirect
+// ? Make the route able to accept uploaded files and configure where they should be saved (wtf ?) (CIG ?)
+// [~] cookies
+// [?] session managment
+
 struct Server;
 
 #define DEFAULT_CONF_PATH "./conf/default.conf"
@@ -22,6 +29,8 @@ public:
 
 	Server	populateServerInfos();
 
+	std::string getCookies(const Server& serv);
+
 private:
 	Block	loadBlock(std::vector<std::string>::iterator& it, const std::string &name);
 	void	parseBlock();
@@ -32,7 +41,7 @@ private:
 private:
 	std::vector<std::string>	m_file;
 	Block						m_block;
-	std::ifstream				m_stream;	
+	std::ifstream				m_stream;
 	std::string					m_filepath;
 	std::string					default_config_path;
 

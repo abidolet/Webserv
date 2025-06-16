@@ -25,7 +25,8 @@ namespace Utils
 
 		while (std::getline(stream, line))
 		{
-			file.push_back(line);
+			if (!line.empty())
+				file.push_back(line);
 		}
 
 		return file;
@@ -125,6 +126,22 @@ namespace Utils
 		return strs;
 	}
 
+	bool isonly(std::string str, std::string set)
+	{
+		for (size_t j = 0; j < str.size(); j++)
+		{
+			size_t i = 0;
+			for ( ; i < set.size(); i++)
+			{
+				if (set[i] == str[j])
+					break;
+			}
+			if (i == set.size())
+				return false;
+		}
+		return true;
+	}
+
 	bool is_number(std::string str)
 	{
 		for (size_t i = 0; i < str.size(); i++)
@@ -174,7 +191,7 @@ namespace Utils
 
 	void printServConfig(Server serv)
 	{
-		Log(Log::DEBUG) << "server config:" << Log::endl();
+		Log(Log::DEBUG) << "[server config]:" << Log::endl();
 		Log(Log::DEBUG) << "\t|-> root:" << serv.root << Log::endl();
 		Log(Log::DEBUG) << "\t|-> server_name:" << serv.server_name << Log::endl();
 		Log(Log::DEBUG) << "\t|-> client_max_body_size:" << serv.client_max_body_size << Log::endl();
@@ -200,6 +217,21 @@ namespace Utils
 			}
 		}
 
+		// printing cookies
+		{
+			if (serv.cookies.size() > 0)
+			{
+				Log(Log::DEBUG) << "\t|->" << serv.cookies.size() << "cookies" << Log::endl();
+				std::vector<std::string>::iterator it = serv.cookies.begin();
+				for ( ; it != serv.cookies.end(); ++it)
+				{
+					Log(Log::DEBUG) << "\t|\t|-> {" << *it << "}" << Log::endl();
+				}
+			}
+			else
+				Log(Log::DEBUG) << "\t|->" << "no cookies ﾍ( ´Д`)ﾉ" << Log::endl();
+		}
+
 		// printing each location
 		{
 			Log(Log::DEBUG) << "\t|" << Log::endl();
@@ -212,11 +244,31 @@ namespace Utils
 				Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> allowed methods:" << Utils::strUnite(it->allowed_methods, ",") << Log::endl();
-				Log(Log::DEBUG) << "\t|\t|-> cgi pass: [" << it->cgi_pass << "]" << Log::endl();
-				Log(Log::DEBUG) << "\t|\t|-> cgi extension: [" << it->cgi_extension << "]" << Log::endl();
-				Log(Log::DEBUG) << "\t|\t|-> is cgi:" << it->is_cgi  << Log::endl();
+				Log(Log::DEBUG) << "\t|\t|-> dir listing:" << (it->directoryListing ? "on" : "off")  << Log::endl();
+				if (it->redirection.first != -1)
+					Log(Log::DEBUG) << "\t|\t|-> redirection:" << it->redirection.first << "=>" << it->redirection.second << Log::endl();
+				if (it->is_cgi)
+				{
+					Log(Log::DEBUG) << "\t|\t|-> cgi pass: [" << it->cgi_pass << "]" << Log::endl();
+					Log(Log::DEBUG) << "\t|\t|-> cgi extension: [" << it->cgi_extension << "]" << Log::endl();
+				}
 			}
 		}
 	}
+
+	std::string findFileFolder(const std::string& filepath)
+	{
+		return filepath.substr(0, filepath.find_last_of("/") + 1);
+	}
+
+	void printFile(const std::vector<std::string> &file)
+	{
+		for (size_t i = 0; i < file.size(); i++)
+		{
+			Log(Log::DEBUG) << file[i] << Log::endl();
+		}
+	}
 }
+
+
 

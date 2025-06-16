@@ -1,3 +1,6 @@
+#ifndef PARSERUTILS_HPP
+#define PARSERUTILS_HPP
+
 #include <string>
 #include <vector>
 
@@ -19,10 +22,15 @@ namespace Utils
 
 	bool is_number(std::vector<std::string> strs);
 	bool is_number(std::string str);
+	bool isonly(std::string str, std::string set);
 
 	bool fileAccess(const std::string& path);
 	bool dirAccess(const std::string& path);
+	std::string findFileFolder(const std::string& filepath);
 
 	void printServConfig(Server serv);
+	void printFile(const std::vector<std::string> &file);
 
 }
+
+#endif // PARSERUTILS_HPP

@@ -4,6 +4,7 @@
 # include <iostream>
 # include <vector>
 # include <map>
+
 # include "Block.hpp"
 
 #include "CgiHandler.hpp"
@@ -33,11 +34,16 @@ struct 	Location
 	std::string		cgi_extension;
 	bool			is_cgi;
 
+	int				directoryListing;
+
+	std::pair<int, std::string> redirection;
+
 	std::vector<std::string>	allowed_methods;
 private:
 	void	setupLocationRoot(const Block& block);
 
 };
+
 
 struct	Server
 {
@@ -63,12 +69,15 @@ struct	Server
 	std::map<int, std::string>	error_pages;
 	std::map<std::string, int>	listen;
 
+	std::vector<std::string>	cookies;
+
 private:
 	void	setupMaxBodySize(Block& block);
 	void	setupRedirections(Block& block);
 	void	setupListen(Block &block);
 
 };
+
 
 class	Webserv
 {
@@ -77,6 +86,8 @@ class	Webserv
 
 		int					_epoll_fd;
 		int					_listener_fd;
+
+		std::string			cookies;
 
 		// HttpRequest	parseRequest(const std::string& rawRequest);
 		// std::string	handleGetRequest(const std::string& request);

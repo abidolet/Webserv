@@ -15,22 +15,37 @@ void Server::init(Block &block)
 	setupRedirections(block);
 }
 
-void checkDirAccess(const std::string& path)
-{
-	if (Utils::dirAccess(path))
-		return;
-	throw Parser::InvalidDirOrFileException(path);
-}
-
 void Server::runSelfCheck()
 {
-	checkDirAccess(root);
+#if RUN_SERV_SELF_CHECK
+
+	if (Utils::dirAccess(root) == false)
+		throw Parser::InvalidDirOrFileException(root);
+
+	// checking for invlid error_page path
 	std::map<int, std::string>::iterator it = error_pages.begin();
 	for ( ; it != error_pages.end(); ++it)
 	{
 		if (Utils::fileAccess(it->second) == false)
 			throw Parser::InvalidDirOrFileException(it->second);
 	}
+
+	// checking if mutiple location are the same
+	std::vector<std::string> names;
+	for (size_t i = 0; i < locations.size(); i++)
+	{
+		for (size_t j = 0; j < names.size(); j++)
+		{
+			if (names[j] == locations[i].root)
+				throw std::runtime_error("duplicate location directive; `" + names[j] + "'");
+		}
+		names.push_back(locations[i].root);
+	}
+
+	Log(Log::SUCCESS) << "server self check pass!" << Log::endl();
+#else
+	Log(Log::WARNING) << "server self checks are disable (set RUN_SERV_SELF_CHECK to 1 to enable)" << Log::endl();
+#endif
 }
 
 Location* Server::searchLocationByName(const std::string& name)

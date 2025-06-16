@@ -13,7 +13,13 @@ Parser::Parser(const std::string& filepath)
 	if (!m_stream.good() || !m_stream.is_open())
 		throw std::runtime_error("cannot open " + filepath);
 	m_file = Utils::read_file(m_stream);
+	m_stream.close();
 	Log(Log::SUCCESS) << filepath << "is loaded!" << Log::endl();
+
+#if 0
+	Utils::printFile(m_file);
+#endif
+
 	parseBlock();
 }
 
@@ -25,7 +31,7 @@ void Parser::parseBlock()
 
 std::string Parser::joinPath(Server& serv, const std::string &path, std::string locationName)
 {
-	Location* location = serv.searchLocationByName(locationName);
+	Location* location = serv.searchLocationByName(Utils::findFileFolder(locationName));
 
 	std::string to_add;
 	if (location == NULL)
@@ -103,66 +109,96 @@ std::vector<std::string> setupAllowedMethods(Block& block)
 	return result;
 }
 
-std::vector<Location> populateLocationInfos(Block serv_block)
+void populateServerSubInfos(Block serv_block, Server& serv)
 {
 	std::vector<Location> locations;
 
-	const std::string locationOptions[] = {"index", "path", "allowed_methods", "cgi_pass"};
-	serv_block.blockAssert(std::vector<std::string>(locationOptions, locationOptions + 4), "location");
+	const std::string locationOptions[] = {"index", "path", "allowed_methods", "cgi_pass", "return", "directory_listing"};
+	const std::string cookiesOptions[] = {"set"};
+	const std::string names[] = { "location", "cookies" };
+
+	serv_block.nameAssert(std::vector<std::string>(names, names + 2));
 
 	std::vector<Block>::iterator it = serv_block.inners.begin();
 	for ( ; it != serv_block.inners.end(); ++it)
 	{
-		Location tmp(*it);
-		tmp.allowed_methods = setupAllowedMethods(*it);
-		locations.push_back(tmp);
+
+		if (it->getName() == "location")
+		{
+			it->dirAssert(std::vector<std::string>(locationOptions, locationOptions + 6));
+			Location tmp(*it);
+			tmp.allowed_methods = setupAllowedMethods(*it);
+			locations.push_back(tmp);
+		}
+		if (it->getName() == "cookies")
+		{
+			it->dirAssert(std::vector<std::string>(cookiesOptions, cookiesOptions + 1));
+			serv.cookies = it->loadDirectives("set");
+		}
 	}
-	return locations;
+	serv.locations = locations;
 }
 
 Server Parser::populateServerInfos()
 {
-	Server serv;
+	std::vector<Server> servs;
+
+	const std::string names[] = { "server" };
 	const std::string options[] = {
 		"listen", "host", "server_name", "return", "root",
 		"client_max_body_size", "allowed_methods", "error_page"
 	};
 
-	m_block.blockAssert(std::vector<std::string>(options, options + 8), "server");
+	m_block.nameAssert(std::vector<std::string>(names, names + 1));
 	Log(Log::SUCCESS) << "server block is good" << Log::endl();
 
 	//
 	// parsing server blocks
-	// TODO: this should return a vector of server
 	//
 	std::vector<Block>::iterator it = m_block.inners.begin();
 	for ( ; it != m_block.inners.end(); ++it) // loop on each server block
 	{
+		it->dirAssert(std::vector<std::string>(options, options + 8));
+
+		Server serv;
+
 		serv.init(*it);
 		serv.allowed_methods = setupAllowedMethods(*it);
-		serv.locations = populateLocationInfos(*it);
+		populateServerSubInfos(*it, serv); // will populate locations and cookies
 
 		std::map<int, std::string>::iterator page = serv.error_pages.begin();
 		for ( ; page != serv.error_pages.end(); ++page)
 		{
 			page->second = joinPath(serv, page->second, page->second);
 		}
+		serv.runSelfCheck();
+
+		// can be disabled by settings RUN_SERV_SELF_CHECK to 0 in webserv.hpp
+		servs.push_back(serv);
 	}
 
-	Utils::printServConfig(serv);
-	std::cout << std::endl;
-
-
-#if RUN_SERV_SELF_CHECK
-	serv.runSelfCheck();
-#endif
+	for (size_t i = 0; i < servs.size(); i++)
+	{
+		Utils::printServConfig(servs[i]);
+	}
 
 	Log(Log::SUCCESS) << m_filepath << " was parsed successfuly" << Log::endl();
-	return serv;
+	return servs[0]; // TODO: voir avec alexis pour return le vec de serv a la place de juste le prems
 }
 
+std::string Parser::getCookies(const Server& serv) // TODO: voir avec alexis pour mettre les cookies
+{
+	const std::string declaration = "Set-Cookie: ";
+	std::string cookies;
+
+	for (size_t i = 0; i < serv.cookies.size(); i++)
+	{
+		cookies += declaration;
+		cookies += serv.cookies[i];
+		cookies += "\r\n";
+	}
+	return cookies;
+}
 
 //TODO check le parsing:
-// [ ] mettre des blocs sans le `{'
 // [ ] mettre des str la ou y'a besoin de nombre
-// [ ] si une directive a pas de value le comportement est bizarre

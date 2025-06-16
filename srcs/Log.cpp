@@ -22,7 +22,7 @@ void Log::displayTimestamp()
 	m_oss << printCol(GRAY) << "["
 		<< std::setfill('0') << std::setw(2) << h << ":"
 		<< std::setfill('0') << std::setw(2) << min << ":"
-		<< std::setfill('0') << std::setw(2) << s << "] ";
+		<< std::setfill('0') << std::setw(2) << s << "] " << printCol(RESET);
 }
 
 void Log::setFlags(uint16_t flags)

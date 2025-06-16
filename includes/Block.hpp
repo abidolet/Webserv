@@ -13,8 +13,12 @@ public:
 	std::vector<std::string>	loadDirectives(const std::string& keyword);
 	void						loadSingleDirective(const std::string& keyword, std::string& ref);
 
-	bool	blockAssert(const std::vector<std::string> &shouldBeFound, const std::string &blockName);
+	bool	dirAssert(const std::vector<std::string> &shouldBeFound);
+	void	nameAssert(const std::vector<std::string> &shouldBeFound);
+
 	Block*	searchBlockByName(const std::string& name);
+
+	std::string getName() { return block_name.substr(0, block_name.find(" ")); }
 
 	std::string					block_name;
 
