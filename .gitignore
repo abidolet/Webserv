@@ -54,3 +54,6 @@ bin/
 obj/
 *.txt
 
+webserv
+libwebserv.a
+.idea/
