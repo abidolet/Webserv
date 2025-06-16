@@ -134,6 +134,7 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 		{
 			it->dirAssert(std::vector<std::string>(cookiesOptions, cookiesOptions + 1));
 			serv.cookies = it->loadDirectives("set");
+			//! assert cookies
 		}
 	}
 	serv.locations = locations;

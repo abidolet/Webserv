@@ -55,6 +55,7 @@ struct	Server
 
 	void		init(Block& block);
 	void		runSelfCheck();
+	void		cookiesAssert();
 
 	Location *searchLocationByName(const std::string &name);
 

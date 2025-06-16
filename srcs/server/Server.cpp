@@ -15,6 +15,11 @@ void Server::init(Block &block)
 	setupRedirections(block);
 }
 
+void Server::cookiesAssert()
+{
+
+}
+
 void Server::runSelfCheck()
 {
 #if RUN_SERV_SELF_CHECK
