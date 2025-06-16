@@ -14,4 +14,4 @@
 !test
 !*_tester!*.html
 !errors_pages
-!units_tests/
+!better-libunit/**
