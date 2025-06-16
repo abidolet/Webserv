@@ -85,7 +85,7 @@ class	Webserv
 		std::vector<Server>	_servers;
 
 		int					_epoll_fd;
-		int					_listener_fd;
+		std::vector<int>	_listener_fds;
 
 		std::string			cookies;
 
@@ -95,7 +95,7 @@ class	Webserv
 
 		void	run();
 
-		std::string	handleGetRequest(std::string& path) const;
+		std::string	handleGetRequest(const Server&	server, std::string& path) const;
 		std::string	handlePostRequest(const std::string& body) const;
 		std::string	handleDeleteRequest(const std::string& request) const;
 
