@@ -5,7 +5,7 @@ OBJ_DIR = obj-$(MODE)
 INCLUDES = -Iincludes
 
 CXX = c++
-CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98
+CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98 -fPIE
 
 ifeq ($(MODE), debug)
 	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -g3 -std=c++98
@@ -55,6 +55,10 @@ $(BIN): $(OBJS)
 $(OBJ_DIR)/%.o: %.cpp Makefile |  $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 	printf "$(GRAY)compiling: $(BLUE)%-40s $(GRAY)[%d/%d]\n" "$<" "$$(ls $(OBJ_DIR) | grep -c '\.o')" "$(words $(SRCS))"
+
+units: $(OBJS)
+	ar rcs libwebserv.a $(OBJS)
+	$(MAKE) test -C better-libunit 
 
 leaks:
 	$(MAKE) MODE=debug all
