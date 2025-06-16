@@ -21,7 +21,7 @@ Webserv::Webserv(const std::string& file)
 	: _servers(), _epoll_fd(-1), _listener_fds()
 {
 	Parser	parser(file);
-	_servers.push_back(parser.populateServerInfos());
+	_servers = parser.populateServerInfos();
 }
 
 Webserv::~Webserv()
@@ -152,16 +152,21 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 
 	Log(Log::DEBUG) << "Get request trimmed: " << path << Log::endl();
 
-	std::string		full_path = server.root + path;
-
 	for (size_t	i = 0; i < server.locations.size(); ++i)
 	{
-		if (server.locations[i].root == path)
+		size_t		slash_pos = path.find('/', 1);
+		std::string	path_part = (slash_pos != std::string::npos) ? path.substr(0, slash_pos) : path;
+		Log(Log::DEBUG) << "Checking location: " << server.locations[i].root << " | " << path_part << Log::endl();
+
+		if (server.locations[i].root == path_part)
 		{
-			full_path = server.locations[i].path + '/' + server.locations[i].index;
+			Log(Log::DEBUG) << "Location matched: " << server.locations[i].path << Log::endl();
+			path = server.locations[i].path + '/' + server.locations[i].index;
 			break ;
 		}
 	}
+
+	std::string		full_path = server.root + path;
 
 	Log(Log::DEBUG) << "Get request final: " << full_path << Log::endl();
 
@@ -177,7 +182,7 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 	std::ifstream	file(full_path.c_str(), std::ios::binary);
 	if (!file)
 	{
-		Log(Log::ERROR) << "Cannot open " << file << Log::endl();
+		Log(Log::ERROR) << "Cannot open " << full_path << Log::endl();
 		return (getErrorPage(403));
 	}
 

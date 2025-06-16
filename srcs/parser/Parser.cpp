@@ -140,7 +140,7 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 	serv.locations = locations;
 }
 
-Server Parser::populateServerInfos()
+std::vector<Server>	Parser::populateServerInfos()
 {
 	std::vector<Server> servs;
 
@@ -184,7 +184,7 @@ Server Parser::populateServerInfos()
 	}
 
 	Log(Log::SUCCESS) << m_filepath << " was parsed successfuly" << Log::endl();
-	return servs[0]; // TODO: voir avec alexis pour return le vec de serv a la place de juste le prems
+	return servs; // TODO: voir avec alexis pour return le vec de serv a la place de juste le prems
 }
 
 std::string Parser::getCookies(const Server& serv) // TODO: voir avec alexis pour mettre les cookies

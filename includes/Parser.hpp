@@ -27,7 +27,7 @@ public:
 	Parser(const std::string& filepath);
 	~Parser() {};
 
-	Server	populateServerInfos();
+	std::vector<Server>	populateServerInfos();
 
 	std::string getCookies(const Server& serv);
 
