@@ -57,3 +57,4 @@ obj/
 webserv
 libwebserv.a
 .idea/
+.sessions

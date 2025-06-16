@@ -58,7 +58,7 @@ $(OBJ_DIR)/%.o: %.cpp Makefile |  $(OBJ_DIR)
 
 units: $(OBJS)
 	ar rcs libwebserv.a $(OBJS)
-	$(MAKE) test -C better-libunit 
+	$(MAKE) test -C libunit
 
 leaks:
 	$(MAKE) MODE=debug all
