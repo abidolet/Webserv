@@ -41,7 +41,7 @@ namespace Libunit
 	*/
 	void Test::PrintResult(std::string res)
 	{
-		std::cout << "[" << GRAY << m_function_name << RESET << "]:";
+		std::cout << "[" << "\033[90m" << m_function_name << RESET << "]:";
 		std::cout << m_test_name;
 
 		// print dot

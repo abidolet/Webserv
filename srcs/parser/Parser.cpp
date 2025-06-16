@@ -140,7 +140,7 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 	serv.locations = locations;
 }
 
-std::vector<Server>	Parser::populateServerInfos()
+std::vector<Server> Parser::populateServerInfos()
 {
 	std::vector<Server> servs;
 

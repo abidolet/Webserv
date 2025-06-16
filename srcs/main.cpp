@@ -25,6 +25,9 @@ void	handle_signal(int signal)
 
 int main (int argc, char *argv[])
 {
+	// Server::registerSession("test");
+	//
+	// return 0;
 	signal(SIGINT, handle_signal);
 	signal(SIGQUIT, handle_signal);
 	signal(SIGTERM, handle_signal);

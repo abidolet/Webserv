@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <list>
+#include <fstream>
 
 #include "Webserv.hpp"
 #include "Block.hpp"
@@ -62,6 +63,60 @@ Location* Server::searchLocationByName(const std::string& name)
 			return &(*it);
 	}
 	return NULL;
+}
+
+//TODO: assert file
+std::map<std::string, int> parseSession(std::vector<std::string>& lines)
+{
+	std::map<std::string, int> sessions;
+
+	std::vector<std::string>::iterator it = lines.begin();
+	for ( ; it != lines.end(); ++it)
+	{
+		std::vector<std::string> split = Utils::strsplit(*it, ',');
+		if (split.size() != 2)
+			throw std::runtime_error("broken session file ");
+		char* endl;
+		sessions.insert(std::pair<std::string, int>(split[0], std::strtol(split[1].c_str(), &endl, 10)));
+	}
+	return sessions;
+}
+
+//TODO voir avec alexi pour implementer le register session
+void Server::registerSession(const std::string& key)
+{
+	const std::string	sessionFilepath = "./.sessions";
+	std::fstream		stream;
+
+	stream.open(sessionFilepath.c_str(), std::fstream::out);
+	if (stream.is_open() == false)
+		throw Parser::InvalidDirOrFileException(sessionFilepath);
+
+	std::vector<std::string>	lines;
+	std::string					line;
+	while (std::getline(stream, line))
+		lines.push_back(line);
+	stream.close();
+
+	stream.open(sessionFilepath.c_str());
+	if (stream.is_open() == false)
+		throw Parser::InvalidDirOrFileException(sessionFilepath);
+
+	std::map<std::string, int> sessions = parseSession(lines);
+	std::map<std::string, int>::iterator it = sessions.begin();
+	for ( ; it != sessions.end(); ++it)
+	{
+		if (it->first != key)
+			stream << it->first << "," << it->second << "\n";
+		else
+		{
+			stream << key << "," << (it->second + 1);
+		}
+	}
+	if (sessions.find(key) == sessions.end())
+		stream << key << ",0\n";
+
+	stream.close();
 }
 
 void Server::setupMaxBodySize(Block& block)
