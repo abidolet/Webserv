@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/12 15:12:48 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/17 13:39:49 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,6 +53,7 @@ std::string	CgiHandler::launch()
 	if (this->info[AS_BODY] && !this->info[BODY_SENT])
 		Log(Log::ERROR) << "This request need body before executing" << Log::endl();
 
+	Log(Log::LOG) << this->cgi << Log::endl();
 	this->pid = fork();
 
 	if (pid < 0)
@@ -89,6 +90,9 @@ void	CgiHandler::constructEnv()
 	this->envConstruct[SCRIPT_FILENAME].append(this->script);
 	this->envConstruct[SCRIPT_NAME].append(this->script);
 
+	this->path.append(DEFAULT_SERVER_ROOT);
+	this->path.append(this->script);
+
 	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
 
 	for (int i = 0; i < ENV_SIZE; ++i)
@@ -110,7 +114,7 @@ void	CgiHandler::closePipes()
 
 void	CgiHandler::childProcess()
 {
-	char* args[] = {const_cast<char*>(this->script.c_str()), NULL};
+	char* args[] = {const_cast<char*>(this->cgi.c_str()), const_cast<char*>(this->path.c_str()), NULL};
 
 	close(pipes.to_cgi[INPUT]);
 	close(pipes.from_cgi[OUTPUT]);
