@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/17 13:39:49 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/17 13:55:58 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,7 +114,7 @@ void	CgiHandler::closePipes()
 
 void	CgiHandler::childProcess()
 {
-	char* args[] = {const_cast<char*>(this->cgi.c_str()), const_cast<char*>(this->path.c_str()), NULL};
+	char* args[] = {const_cast<char*>(this->path.c_str()), const_cast<char*>(this->path.c_str()), NULL};
 
 	close(pipes.to_cgi[INPUT]);
 	close(pipes.from_cgi[OUTPUT]);
