@@ -22,6 +22,7 @@ Webserv::Webserv(const std::string& file)
 {
 	Parser	parser(file);
 	_servers = parser.populateServerInfos();
+	cookies = parser.getCookies(_servers[0]);
 }
 
 Webserv::~Webserv()
@@ -152,19 +153,19 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 		if (server.locations[i].root == to_find)
 		{
 			Log(Log::DEBUG) << "Location found for path:" << to_find << Log::endl();
-			path = server.locations[i].path + path.substr(pos) + server.locations[i].index;
+			path = server.locations[i].path + path.substr(pos);
 			break ;
 		}
 	}
 
-	std::string		full_path = server.root + path;
+	std::string	full_path = server.root + path;
 
 	Log(Log::DEBUG) << "Get request final:" << full_path << Log::endl();
 
 	struct stat	statbuf;
 	if (stat(full_path.c_str(), &statbuf) != 0)
 	{
-		Log(Log::ERROR) << "File not found:'" << full_path << "'" << Log::endl();
+		Log(Log::WARNING) << "File not found:'" << full_path << "'" << Log::endl();
 		return (getErrorPage(404));
 	}
 
@@ -173,7 +174,7 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 	std::ifstream	file(full_path.c_str(), std::ios::binary);
 	if (!file)
 	{
-		Log(Log::ERROR) << "Cannot open " << full_path << Log::endl();
+		Log(Log::WARNING) << "Cannot open " << full_path << Log::endl();
 		return (getErrorPage(403));
 	}
 
@@ -183,7 +184,7 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 
 	std::string	response = "HTTP/1.1 200 OK\r\n";
 	response += "Content-Type: text/html\r\n";
-	response += "Content-Length: " + oss.str() + "\r\n\r\n";
+	response += "Content-Length: " + oss.str() + cookies + "\r\n\r\n";
 	response += content;
 
 	return (response);
