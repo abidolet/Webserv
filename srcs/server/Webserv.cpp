@@ -152,7 +152,7 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 		if (server.locations[i].root == to_find)
 		{
 			Log(Log::DEBUG) << "Location found for path:" << to_find << Log::endl();
-			path = server.locations[i].path + path.substr(pos);
+			path = server.locations[i].path + path.substr(pos) + server.locations[i].index;
 			break ;
 		}
 	}
