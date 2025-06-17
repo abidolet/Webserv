@@ -46,16 +46,19 @@ private:
 
 struct Session
 {
-	std::string	key;
 	size_t	uid;
-	size_t		visitCount;
+	size_t	visitCount;
 
-	static Session		registerSession(const std::string& key); // use the $USER for seed ?
+	Session();
+	Session(uint _uid);
+
+	std::string			sessionToString();
 	static Session		stringToSession(std::string &str);
-	static std::string	sessionToString(const Session& session);
-	static Session*		find(std::vector<Session> &sessions, size_t);
-	static Session*		find(std::vector<Session> &sessions, const std::string &key);
+	static Session*		find(std::vector<Session> &sessions, size_t uid);
 };
+
+std::ostream& operator<<(std::ostream& stream, const Session& session);
+
 
 struct	Server
 {
@@ -70,7 +73,7 @@ struct	Server
 	void		cookiesAssert();
 
 	Location*	searchLocationByName(const std::string &name);
-	static void	registerSession(const std::string &key);
+	static void	registerSession(const uint uid);
 
 	std::string					root;
 
@@ -84,7 +87,7 @@ struct	Server
 	std::map<std::string, int>	listen;
 
 	std::vector<std::string>	cookies;
-	std::map<std::string, int>	sessions;
+	static std::vector<Session>	sessions;
 
 private:
 	void	setupMaxBodySize(Block& block);

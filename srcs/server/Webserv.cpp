@@ -114,6 +114,7 @@ HttpRequest	parseRequest(const std::string& rawRequest)
 	std::string	value;
 	while (std::getline(stream, line) && line != "\r")
 	{
+
 		pos = line.find(':');
 		if (pos != std::string::npos)
 		{
@@ -233,6 +234,8 @@ std::string	Webserv::handleDeleteRequest(const std::string& request) const
 	}
 }
 
+
+
 void Webserv::run()
 {
 	Log() << "Running web server..." << Log::endl();
@@ -305,6 +308,7 @@ void Webserv::run()
 			if (it != _listener_fds.end())
 			{
 				int	client = accept(fd, NULL, NULL);
+				
 				if (client < 0)
 				{
 					Log(Log::ERROR) << "accept failed:" << strerror(errno) << Log::endl();
@@ -361,6 +365,9 @@ void Webserv::run()
 					socklen_t			addr_len = sizeof(addr);
 					getsockname(fd, (struct sockaddr*)&addr, &addr_len);
 					uint16_t			port = ntohs(addr.sin_port);
+
+					Server::registerSession(addr.sin_addr.s_addr);
+					Log() << addr.sin_addr.s_addr << port << Log::endl();
 
 					Server*	server = NULL;
 					for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)

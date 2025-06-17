@@ -90,8 +90,8 @@ std::map<std::string, int> parseSession(std::vector<std::string>& lines)
 	for ( ; it != lines.end(); ++it)
 	{
 		std::vector<std::string> split = Utils::strsplit(*it, ',');
-		if (split.size() != 2)
-			throw std::runtime_error("broken session file ");
+		// if (split.size() != 3)
+		// 	throw std::runtime_error(" ");
 		char* endl;
 		sessions.insert(std::pair<std::string, int>(split[0], std::strtol(split[1].c_str(), &endl, 10)));
 	}
@@ -137,42 +137,72 @@ void Server::registerSession(const std::string& key)
 }
 #endif
 
-void Server::registerSession(const std::string& key)
+void createFile(const std::string& filepath)
 {
-	const std::string	sessionFilepath = "./.sessions";
-	std::fstream		stream;
+	std::ofstream stream;
 
-	stream.open(sessionFilepath.c_str(), std::fstream::out);
+	stream.open(filepath.c_str());
 	if (stream.is_open() == false)
-		throw Parser::InvalidDirOrFileException(sessionFilepath);
+		throw std::runtime_error("cannot open file; `" + filepath + "'");
+	stream.close();
+}
 
+std::vector<Session> readSessions(const std::string& sessionFilepath)
+{
+	
+	if (Utils::fileAccess(sessionFilepath) == false)
+		createFile(sessionFilepath);
+	
+	std::ifstream			stream;
 	std::vector<Session>	sessions;
 	std::string				line;
+
+	stream.open(sessionFilepath.c_str());
+	if (stream.is_open() == false)
+		throw Parser::InvalidDirOrFileException(sessionFilepath);
+	
 	while (std::getline(stream, line))
+	{
+		if (line.empty())
+			continue;
 		sessions.push_back(Session::stringToSession(line));
+	}
 	stream.close();
+
+	return sessions;
+}
+
+void Server::registerSession(const uint uid)
+{
+	const std::string	sessionFilepath = "./.sessions";
+	std::ofstream		stream;
+	std::vector<Session> sessions = readSessions(sessionFilepath);
 
 	stream.open(sessionFilepath.c_str());
 	if (stream.is_open() == false)
 		throw Parser::InvalidDirOrFileException(sessionFilepath);
 
-	std::vector<Session>::iterator it = sessions.begin();
-	for ( ; it != sessions.end(); ++it)
+	if (sessions.size() > 0)
 	{
-		if (it->key != key)
-			stream << Session::sessionToString(*it) << "\n";
-		else
+		std::vector<Session>::iterator it = sessions.begin();
+		for ( ; it != sessions.end(); ++it)
 		{
-			it->visitCount++;
-			stream << Session::sessionToString(*it) << "\n";
+			// Log() << *it << Log::endl(); 
+			if (it->uid != uid)
+				stream << it->sessionToString() << "\n";
+			else
+			{
+				it->visitCount++;
+				stream << it->sessionToString() << "\n";
+			}
 		}
 	}
-	if (Session::find(sessions, key) == NULL)
+	if (Session::find(sessions, uid) == NULL)
 	{
-		Session session;
-		session.key = key;
-		stream << Session::sessionToString(*it) << "\n";
+		Session session(uid);
+		stream << session.sessionToString() << "\n";
 	}
+
 	stream.close();
 }
 

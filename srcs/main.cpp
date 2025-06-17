@@ -25,8 +25,10 @@ void	handle_signal(int signal)
 
 int main (int argc, char *argv[])
 {
-	// Server::registerSession("test");
-	//
+	// Server::registerSession("jean_mich");
+	// Server::registerSession("vrooom");
+	// Server::registerSession("bidule");
+	
 	// return 0;
 	signal(SIGINT, handle_signal);
 	signal(SIGQUIT, handle_signal);

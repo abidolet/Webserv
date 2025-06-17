@@ -50,6 +50,12 @@ std::string Parser::joinPath(Server& serv, const std::string &path, std::string 
 	}
 	return to_add + path;
 }
+//server {()
+// }
+
+
+// server } (au mid de deux serv)
+//
 
 Block Parser::loadBlock(std::vector<std::string>::iterator& it, const std::string &_name)
 {
@@ -58,6 +64,8 @@ Block Parser::loadBlock(std::vector<std::string>::iterator& it, const std::strin
 	{
 		if (it->find("{") != (size_t)-1)
 		{
+			if (it->find("{") != it->size() - 1)
+				throw std::runtime_error("{ must be at end of line");
 			std::string name = Utils::strtrim(*it, " \t{");
 			++it;
 			block.inners.push_back(loadBlock(it, name));

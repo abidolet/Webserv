@@ -34,7 +34,6 @@ public:
 private:
 	Block	loadBlock(std::vector<std::string>::iterator& it, const std::string &name);
 	void	parseBlock();
-	void	loadFile();
 
 	std::string	joinPath(Server &serv, const std::string &path, std::string locationName);
 
