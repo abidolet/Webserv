@@ -63,7 +63,8 @@ std::string Webserv::getErrorPage(int error_code) const
 
 			return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
 				"Content-Type: text/html\r\n" +
-				"Content-Length: " + oss.str() + "\r\n\r\n" +
+				"Content-Length: " + oss.str() + "\r\n" +
+				"Connection: close\r\n\r\n" +
 				content);
 		}
 		else
@@ -82,7 +83,7 @@ std::string Webserv::getErrorPage(int error_code) const
 
 	return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
 		"Content-Type: text/html\r\n" +
-		"Content-Length: " + oss.str() + "\r\n\r\n" +
+		"Content-Length: " + oss.str() + "\r\nConnection: close\r\n\r\n" +
 		default_content);
 }
 
@@ -139,12 +140,24 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 {
 	Log(Log::DEBUG) << "Get request for:" << path << Log::endl();
 
-	std::string	to_find = "/";
-	std::string::size_type	pos = path.find_last_of("/");
-	if (pos != std::string::npos && pos != 0)
+	while (path != "/" && path[path.size() - 1] == '/')
 	{
-		to_find = path.substr(0, pos);
+		path.erase(path.size() - 1);
 	}
+
+	Log(Log::DEBUG) << "Get request cleaned path:" << path << Log::endl();
+
+	std::string::size_type	pos = path.find_last_of("/");
+	std::string	to_find = path.substr(0, pos);
+	std::string	filename = path.substr(pos + 1);
+	if (pos == 0)
+	{
+		to_find = path;
+		filename = "";
+	}
+	Log(Log::DEBUG) << "Get request to_find:" << to_find << Log::endl();
+	Log(Log::DEBUG) << "Get request filename:" << filename << Log::endl();
+
 	Log(Log::DEBUG) << "Searching for location with path:" << to_find << Log::endl();
 
 	for (size_t	i = 0; i < server.locations.size(); ++i)
@@ -153,12 +166,31 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 		if (server.locations[i].root == to_find)
 		{
 			Log(Log::DEBUG) << "Location found for path:" << to_find << Log::endl();
-			path = server.locations[i].path + path.substr(pos);
+			path = server.locations[i].path + filename;
+			DIR*	dir = opendir(path.c_str());
+			if (dir)
+			{
+				Log(Log::DEBUG) << "Directory opened successfully:" << path << Log::endl();
+				closedir(dir);
+				path += '/' + server.locations[i].index;
+			}
 			break ;
+		}
+		else if (i == server.locations.size() - 1)
+		{
+			Log(Log::DEBUG) << "No location found for path, adding root" << Log::endl();
+			path = server.root + path;
+			DIR*	dir = opendir(path.c_str());
+			if (dir)
+			{
+				Log(Log::DEBUG) << "Directory opened successfully:" << path << Log::endl();
+				closedir(dir);
+				return (getErrorPage(403));
+			}
 		}
 	}
 
-	std::string	full_path = server.root + path;
+	std::string	full_path = path;
 
 	Log(Log::DEBUG) << "Get request final:" << full_path << Log::endl();
 
@@ -184,7 +216,7 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 
 	std::string	response = "HTTP/1.1 200 OK\r\n";
 	response += "Content-Type: text/html\r\n";
-	response += "Content-Length: " + oss.str() + cookies + "\r\n\r\n";
+	response += "Content-Length: " + oss.str() + "Connection: close\r\n" + cookies + "\r\n\r\n";
 	response += content;
 
 	return (response);
@@ -200,7 +232,7 @@ std::string	Webserv::handlePostRequest(const std::string& body) const
 
 	std::string	response = "HTTP/1.1 200 OK\r\n";
 	response += "Content-Type: text/plain\r\n";
-	response += "Content-Length: " + content_length + "\r\n\r\n";
+	response += "Content-Length: " + content_length + "Connection: close\r\n\r\n";
 	response += body;
 
 	Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
@@ -224,7 +256,7 @@ std::string	Webserv::handleDeleteRequest(const std::string& request) const
 	if (remove(path.c_str()) == 0)
 	{
 		Log(Log::SUCCESS) << "File deleted !" << path << Log::endl();
-		return ("HTTP/1.1 200 OK\r\n\r\nFile deleted successfully :)\r\n");
+		return ("HTTP/1.1 200 OK\r\n\rConnection: close\r\n\r\nFile deleted successfully :)\r\n");
 	}
 	else
 	{
@@ -240,7 +272,7 @@ void Webserv::run()
 	_epoll_fd = epoll_create(10);
 	if (_epoll_fd == -1)
 	{
-		throw std::runtime_error("Failed to create epoll instance:");
+		throw std::runtime_error("Failed to create epoll instance: " + static_cast<std::string>(strerror(errno)));
 	}
 
 	Log(Log::DEBUG) << "Webserv started on" << _servers.size() << "server(s)" << Log::endl();
@@ -251,13 +283,22 @@ void Webserv::run()
 		int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (listener_fd < 0)
 		{
-			throw std::runtime_error("Failed to create socket:");
+			throw std::runtime_error("Failed to create socket: " + static_cast<std::string>(strerror(errno)));
 		}
 
 		int	opt = 1;
 		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 		{
-			throw std::runtime_error("setsockopt failed:");
+			throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
+		}
+		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1)
+		{
+			throw std::runtime_error("setsockopt failed:" + static_cast<std::string>(strerror(errno)));
+		}
+
+		if (fcntl(listener_fd, F_SETFL, O_NONBLOCK | FD_CLOEXEC) == -1)
+		{
+			throw std::runtime_error("fcntl failed: " + static_cast<std::string>(strerror(errno)));
 		}
 
 		struct sockaddr_in	server_addr;
@@ -267,20 +308,26 @@ void Webserv::run()
 
 		if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
 		{
-			throw std::runtime_error("bind failed:");
+			throw std::runtime_error("bind failed: " + static_cast<std::string>(strerror(errno)));
 		}
 
-		if (listen(listener_fd, SOMAXCONN) == -1)
+		if (listen(listener_fd, 4096) == -1)
 		{
-			throw std::runtime_error("listen failed:");
+			throw std::runtime_error("listen failed: " + static_cast<std::string>(strerror(errno)));
 		}
 
 		struct epoll_event	ev;
 		ev.events = EPOLLIN | EPOLLET;
 		ev.data.fd = listener_fd;
+
+		// struct timeval tv;
+		// tv.tv_sec = 5;
+		// tv.tv_usec = 0;
+		// setsockopt(listener_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+
 		if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, listener_fd, &ev) == -1)
 		{
-			throw std::runtime_error("epoll_ctl failed:");
+			throw std::runtime_error("epoll_ctl failed: " + static_cast<std::string>(strerror(errno)));
 		}
 
 		_listener_fds.push_back(listener_fd);
@@ -290,10 +337,10 @@ void Webserv::run()
 
 	while (true)
 	{
-		int	nfds = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
+		int	nfds = epoll_wait(_epoll_fd, events, MAX_EVENTS, 100);
 		if (nfds == -1)
 		{
-			Log(Log::ERROR) << "epoll_wait failed:" << strerror(errno) << Log::endl();
+			Log(Log::ERROR) << "epoll_wait failed: " << strerror(errno) << Log::endl();
 			continue ;
 		}
 
@@ -327,107 +374,96 @@ void Webserv::run()
 				}
 				continue ;
 			}
-			else
+			else if (events[n].events & (EPOLLRDHUP | EPOLLHUP))
 			{
-				if (events[n].events & (EPOLLRDHUP | EPOLLHUP))
+				epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+				CLOSE(fd);
+			}
+			else if (events[n].events & EPOLLIN)
+			{
+				char		buffer[4096];
+				ssize_t		bytes_read;
+				std::string	request;
+
+				while ((bytes_read = recv(fd, buffer, sizeof(buffer), 0)) > 0)
 				{
-					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-					CLOSE(fd);
+					request.append(buffer, bytes_read);
 				}
-				else if (events[n].events & EPOLLIN)
+
+				HttpRequest	httpReq = parseRequest(request);
+				CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
+				std::string	response;
+
+				struct sockaddr_in	addr;
+				socklen_t			addr_len = sizeof(addr);
+				getsockname(fd, (struct sockaddr*)&addr, &addr_len);
+				uint16_t			port = ntohs(addr.sin_port);
+
+				Server*	server = NULL;
+				for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 				{
-					char		buffer[4096];
-					ssize_t		bytes_read;
-					std::string	request;
-
-					while ((bytes_read = recv(fd, buffer, sizeof(buffer), 0)) > 0)
+					Server& s = *s_it;
+					if (s.listen.begin()->second == port)
 					{
-						request.append(buffer, bytes_read);
+						server = &s;
+						break ;
 					}
-
-					if (bytes_read == -1 && errno != EAGAIN)
-					{
-						Log(Log::ERROR) << "recv error: " << strerror(errno) << Log::endl();
-						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-						CLOSE(fd);
-						continue ;
-					}
-
-					HttpRequest	httpReq = parseRequest(request);
-					CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
-					std::string	response;
-
-					struct sockaddr_in	addr;
-					socklen_t			addr_len = sizeof(addr);
-					getsockname(fd, (struct sockaddr*)&addr, &addr_len);
-					uint16_t			port = ntohs(addr.sin_port);
-
-					Server*	server = NULL;
-					for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
-					{
-						Server& s = *s_it;
-						if (s.listen.begin()->second == port)
-						{
-							server = &s;
-							break ;
-						}
-					}
-
-					if (!server)
-					{
-						response = getErrorPage(500);
-					}
-					else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
-					{
-						// if (contentLength != 0) cgi.addBody();
-						Log(Log::LOG) << "launching cgi" << Log::endl();
-						response = cgi.launch();
-					}
-					else if (httpReq.method == "GET")
-					{
-						// if (!getAllowed)
-						// {
-						// 	Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
-						// 	response = getErrorPage(405);
-						// }
-						// else
-						// {
-							response = handleGetRequest(*server, httpReq.path);
-						// }
-					}
-					else if (httpReq.method == "POST")
-					{
-						// if (!postAllowed)
-						// {
-							// Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
-							// response = getErrorPage(405);
-						// }
-						// else
-						// {
-							response = handlePostRequest(httpReq.body);
-						// }
-					}
-					else if (httpReq.method == "DELETE")
-					{
-						// if (!deleteAllowed)
-						// {
-							// Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
-							// response = getErrorPage(405);
-						// }
-						// else
-						// {
-							response = handleDeleteRequest(httpReq.path);
-						// }
-					}
-
-					if (send(fd, response.c_str(), response.size(), 0) == -1)
-					{
-						Log(Log::ERROR) << "send error:" << strerror(errno) << Log::endl();
-					}
-
-					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
-					CLOSE(fd);
 				}
+
+				if (!server)
+				{
+					response = getErrorPage(500);
+				}
+				else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
+				{
+					// if (contentLength != 0) cgi.addBody();
+					Log(Log::LOG) << "launching cgi" << Log::endl();
+					response = cgi.launch();
+				}
+				else if (httpReq.method == "GET")
+				{
+					// if (!getAllowed)
+					// {
+					// 	Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
+					// 	response = getErrorPage(405);
+					// }
+					// else
+					// {
+						response = handleGetRequest(*server, httpReq.path);
+					// }
+				}
+				else if (httpReq.method == "POST")
+				{
+					// if (!postAllowed)
+					// {
+						// Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
+						// response = getErrorPage(405);
+					// }
+					// else
+					// {
+						response = handlePostRequest(httpReq.body);
+					// }
+				}
+				else if (httpReq.method == "DELETE")
+				{
+					// if (!deleteAllowed)
+					// {
+						// Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
+						// response = getErrorPage(405);
+					// }
+					// else
+					// {
+						response = handleDeleteRequest(httpReq.path);
+					// }
+				}
+
+				if (send(fd, response.c_str(), response.size(), 0) == -1)
+				{
+					Log(Log::ERROR) << "send error:" << strerror(errno) << Log::endl();
+				}
+
+				epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+				CLOSE(fd);
 			}
 		}
 	}
