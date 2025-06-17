@@ -166,7 +166,7 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 		if (server.locations[i].root == to_find)
 		{
 			Log(Log::DEBUG) << "Location found for path:" << to_find << Log::endl();
-			path = server.locations[i].path + filename;
+			path = server.locations[i].path + '/' + filename;
 			DIR*	dir = opendir(path.c_str());
 			if (dir)
 			{
