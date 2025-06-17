@@ -65,7 +65,7 @@ void Location::setupLocationRoot(const Block& block)
 		if (split.size() != 3)
 			throw std::runtime_error("invalid option in `" + block.block_name + "'");
 
-		const std::string options[] = {".php", ".bla"};
+		const std::string options[] = {".php", ".bla" ,".py"};
 		for (size_t i = 0; i < options->size(); i++)
 		{
 			if (split[2] == options[i])

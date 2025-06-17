@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/12 15:11:52 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/17 13:38:48 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -161,6 +161,7 @@ private:
 
 	std::string	cgi;
 	std::string script;
+	std::string	path;
 
 	bool		info[INFO_SIZE];
 
