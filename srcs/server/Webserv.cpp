@@ -15,19 +15,22 @@
 #include <algorithm>
 
 #define MAX_EVENTS 1024
-#define CLOSE(fd) if (fd > 1) close(fd)
+#define CLOSE(fd) if (fd > 1) {close(fd); fd = -1;}
 
 Webserv::Webserv(const std::string& file)
-	: _servers(), _epoll_fd(-1), _listener_fd(-1)
+	: _servers(), _epoll_fd(-1), _listener_fds()
 {
 	Parser	parser(file);
-	_servers.push_back(parser.populateServerInfos());
+	_servers = parser.populateServerInfos();
 }
 
 Webserv::~Webserv()
 {
 	CLOSE(_epoll_fd);
-	CLOSE(_listener_fd);
+	for (unsigned int i = 0; i < _listener_fds.size(); ++i)
+	{
+		CLOSE(_listener_fds[i]);
+	}
 }
 
 std::string	toString(int value)
@@ -44,14 +47,14 @@ std::string Webserv::getErrorPage(int error_code) const
 
 	if (it != server.error_pages.end())
 	{
-		Log(Log::DEBUG) << "Custom error page for code " << error_code << ": " << it->second << Log::endl();
+		Log(Log::DEBUG) << "Searching custom error page for code" << error_code << ":" << it->second << Log::endl();
 
 		std::string		error_path = it->second;
 		std::ifstream	file(error_path.c_str(), std::ios::binary);
 
 		if (file)
 		{
-			Log(Log::DEBUG) << "Custom error page found: " << error_path << Log::endl();
+			Log(Log::DEBUG) << "Custom error page found:" << error_path << Log::endl();
 
 			std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 			std::ostringstream	oss;
@@ -64,7 +67,7 @@ std::string Webserv::getErrorPage(int error_code) const
 		}
 		else
 		{
-			Log(Log::DEBUG) << "Custom error page not found: " << error_path << Log::endl();
+			Log(Log::DEBUG) << "Custom error page not found:" << error_path << Log::endl();
 		}
 	}
 
@@ -131,54 +134,46 @@ HttpRequest	parseRequest(const std::string& rawRequest)
 	return (request);
 }
 
-std::string	Webserv::handleGetRequest(std::string& path) const
+std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) const
 {
-	Log(Log::DEBUG) << "Get request for: " << path << Log::endl();
+	Log(Log::DEBUG) << "Get request for:" << path << Log::endl();
 
-	size_t	start = path.find_first_not_of(" \t");
-	if (start != std::string::npos)
+	std::string	to_find = "/";
+	std::string::size_type	pos = path.find_last_of("/");
+	if (pos != std::string::npos && pos != 0)
 	{
-		path = path.substr(start);
+		to_find = path.substr(0, pos);
 	}
+	Log(Log::DEBUG) << "Searching for location with path:" << to_find << Log::endl();
 
-	size_t	end = path.find_last_not_of(" \t");
-	if (end != std::string::npos)
+	for (size_t	i = 0; i < server.locations.size(); ++i)
 	{
-		path = path.substr(0, end + 1);
-	}
-
-	Log(Log::DEBUG) << "Get request trimmed: " << path << Log::endl();
-
-	std::string	full_path = _servers[0].root + path;
-
-	if (path.empty() || path == "/")
-	{
-		const Server& server = _servers[0];
-		for (size_t	i = 0; i < server.locations.size(); ++i)
+		Log(Log::DEBUG) << "Checking location:" << server.locations[i].root << Log::endl();
+		if (server.locations[i].root == to_find)
 		{
-			if (server.locations[i].root == path)
-			{
-				full_path = server.locations[i].path + '/' + server.locations[i].index;
-				break ;
-			}
+			Log(Log::DEBUG) << "Location found for path:" << to_find << Log::endl();
+			path = server.locations[i].path + path.substr(pos);
+			break ;
 		}
 	}
 
-	Log(Log::DEBUG) << "Get request final: " << full_path << Log::endl();
+	std::string		full_path = server.root + path;
+
+	Log(Log::DEBUG) << "Get request final:" << full_path << Log::endl();
 
 	struct stat	statbuf;
 	if (stat(full_path.c_str(), &statbuf) != 0)
 	{
-		Log(Log::ERROR) << "File not found: '" << full_path << "'" << Log::endl();
+		Log(Log::ERROR) << "File not found:'" << full_path << "'" << Log::endl();
 		return (getErrorPage(404));
 	}
 
-	Log(Log::DEBUG) << "File found: '" << full_path << "'" << Log::endl();
+	Log(Log::DEBUG) << "File found:'" << full_path << "'" << Log::endl();
 
 	std::ifstream	file(full_path.c_str(), std::ios::binary);
 	if (!file)
 	{
-		Log(Log::ERROR) << "Cannot open " << file << Log::endl();
+		Log(Log::ERROR) << "Cannot open " << full_path << Log::endl();
 		return (getErrorPage(403));
 	}
 
@@ -244,75 +239,74 @@ void Webserv::run()
 	_epoll_fd = epoll_create(10);
 	if (_epoll_fd == -1)
 	{
-		Log(Log::ALERT) << "Failed to create epoll instance" << Log::endl();
-		return ;
+		throw std::runtime_error("Failed to create epoll instance:");
 	}
 
-	_listener_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (_listener_fd < 0)
-	{
-		Log(Log::ALERT) << "Failed to create socket" << Log::endl();
-		return ;
-	}
+	Log(Log::DEBUG) << "Webserv started on" << _servers.size() << "server(s)" << Log::endl();
 
-	int	opt = 1;
-	if (setsockopt(_listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+	for (size_t i = 0; i < _servers.size(); ++i)
 	{
-		Log(Log::ALERT) << "setsockopt failed" << Log::endl();
-		return ;
-	}
+		Log(Log::DEBUG) << "Initializing server" << i << Log::endl();
+		int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
+		if (listener_fd < 0)
+		{
+			throw std::runtime_error("Failed to create socket:");
+		}
 
-	struct sockaddr_in	server_addr;
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = INADDR_ANY;
-	server_addr.sin_port = htons(_servers[0].listen.begin()->second);
+		int	opt = 1;
+		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+		{
+			throw std::runtime_error("setsockopt failed:");
+		}
 
-	if (bind(_listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
-	{
-		perror("bind");
-		Log(Log::ALERT) << "bind failed" << Log::endl();
-		CLOSE(_listener_fd);
-		return ;
-	}
+		struct sockaddr_in	server_addr;
+		server_addr.sin_family = AF_INET;
+		server_addr.sin_addr.s_addr = INADDR_ANY;
+		server_addr.sin_port = htons(_servers[i].listen.begin()->second);
 
-	if (listen(_listener_fd, SOMAXCONN) == -1)
-	{
-		Log(Log::ALERT) << "listen failed" << Log::endl();
-		return ;
-	}
+		if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
+		{
+			throw std::runtime_error("bind failed:");
+		}
 
-	struct epoll_event	ev;
-	ev.events = EPOLLIN | EPOLLET;
-	ev.data.fd = _listener_fd;
-	if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _listener_fd, &ev) == -1)
-	{
-		Log(Log::ALERT) << "epoll_ctl failed" << Log::endl();
-		return ;
+		if (listen(listener_fd, SOMAXCONN) == -1)
+		{
+			throw std::runtime_error("listen failed:");
+		}
+
+		struct epoll_event	ev;
+		ev.events = EPOLLIN | EPOLLET;
+		ev.data.fd = listener_fd;
+		if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, listener_fd, &ev) == -1)
+		{
+			throw std::runtime_error("epoll_ctl failed:");
+		}
+
+		_listener_fds.push_back(listener_fd);
 	}
 
 	struct epoll_event	events[MAX_EVENTS];
-	int					nfds;
-	bool				getAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "GET"));
-	bool				postAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "POST"));
-	bool				deleteAllowed = (_servers[0].allowed_methods.end() != std::find(_servers[0].allowed_methods.begin(), _servers[0].allowed_methods.end(), "DELETE"));
 
 	while (true)
 	{
-		nfds = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
+		int	nfds = epoll_wait(_epoll_fd, events, MAX_EVENTS, 1000);
 		if (nfds == -1)
 		{
-			Log(Log::ERROR) << "epoll_wait failed" << Log::endl();
+			Log(Log::ERROR) << "epoll_wait failed:" << strerror(errno) << Log::endl();
 			continue ;
 		}
 
 		for (int n = 0; n < nfds; ++n)
 		{
-			if (events[n].data.fd == _listener_fd)
+			int	fd = events[n].data.fd;
+			std::vector<int>::iterator	it = std::find(_listener_fds.begin(), _listener_fds.end(), fd);
+
+			if (it != _listener_fds.end())
 			{
-				int	client = accept(_listener_fd, NULL, NULL);
+				int	client = accept(fd, NULL, NULL);
 				if (client < 0)
 				{
-					Log(Log::ERROR) << "accept failed" << Log::endl();
+					Log(Log::ERROR) << "accept failed:" << strerror(errno) << Log::endl();
 					continue ;
 				}
 
@@ -322,20 +316,22 @@ void Webserv::run()
 					continue ;
 				}
 
-				ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-				ev.data.fd = client;
-				if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client, &ev) == -1)
+				struct epoll_event	client_ev;
+				client_ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+				client_ev.data.fd = client;
+				if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client, &client_ev) == -1)
 				{
-					Log(Log::ERROR) << "epoll_ctl for client failed" << Log::endl();
+					Log(Log::ERROR) << "epoll_ctl for client failed:" << strerror(errno) << Log::endl();
 					CLOSE(client);
 				}
+				continue ;
 			}
 			else
 			{
-				if (events[n].events & EPOLLRDHUP)
+				if (events[n].events & (EPOLLRDHUP | EPOLLHUP))
 				{
-					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, NULL);
-					CLOSE(events[n].data.fd);
+					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+					CLOSE(fd);
 				}
 				else if (events[n].events & EPOLLIN)
 				{
@@ -343,16 +339,44 @@ void Webserv::run()
 					ssize_t		bytes_read;
 					std::string	request;
 
-					while ((bytes_read = recv(events[n].data.fd, buffer, sizeof(buffer), 0)) > 0)
+					while ((bytes_read = recv(fd, buffer, sizeof(buffer), 0)) > 0)
 					{
 						request.append(buffer, bytes_read);
+					}
+
+					if (bytes_read == -1 && errno != EAGAIN)
+					{
+						Log(Log::ERROR) << "recv error: " << strerror(errno) << Log::endl();
+						epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+						CLOSE(fd);
+						continue ;
 					}
 
 					HttpRequest	httpReq = parseRequest(request);
 					CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
 					std::string	response;
 
-					if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
+					struct sockaddr_in	addr;
+					socklen_t			addr_len = sizeof(addr);
+					getsockname(fd, (struct sockaddr*)&addr, &addr_len);
+					uint16_t			port = ntohs(addr.sin_port);
+
+					Server*	server = NULL;
+					for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
+					{
+						Server& s = *s_it;
+						if (s.listen.begin()->second == port)
+						{
+							server = &s;
+							break ;
+						}
+					}
+
+					if (!server)
+					{
+						response = getErrorPage(500);
+					}
+					else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
 					{
 						// if (contentLength != 0) cgi.addBody();
 						Log(Log::LOG) << "launching cgi" << Log::endl();
@@ -360,49 +384,48 @@ void Webserv::run()
 					}
 					else if (httpReq.method == "GET")
 					{
-						if (!getAllowed)
-						{
-							Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
-							response = getErrorPage(405);
-						}
-						else
-						{
-							response = handleGetRequest(httpReq.path);
-						}
+						// if (!getAllowed)
+						// {
+						// 	Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
+						// 	response = getErrorPage(405);
+						// }
+						// else
+						// {
+							response = handleGetRequest(*server, httpReq.path);
+						// }
 					}
 					else if (httpReq.method == "POST")
 					{
-						if (!postAllowed)
-						{
-							Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
-							response = getErrorPage(405);
-						}
-						else
-						{
+						// if (!postAllowed)
+						// {
+							// Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
+							// response = getErrorPage(405);
+						// }
+						// else
+						// {
 							response = handlePostRequest(httpReq.body);
-						}
+						// }
 					}
 					else if (httpReq.method == "DELETE")
 					{
-						if (!deleteAllowed)
-						{
-							Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
-							response = getErrorPage(405);
-						}
-						else
-						{
+						// if (!deleteAllowed)
+						// {
+							// Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
+							// response = getErrorPage(405);
+						// }
+						// else
+						// {
 							response = handleDeleteRequest(httpReq.path);
-						}
+						// }
 					}
 
-					ssize_t	bytes_sent = send(events[n].data.fd, response.c_str(), response.size(), 0);
-					if (bytes_sent == -1)
+					if (send(fd, response.c_str(), response.size(), 0) == -1)
 					{
-						Log(Log::ERROR) << "send error" << Log::endl();
+						Log(Log::ERROR) << "send error:" << strerror(errno) << Log::endl();
 					}
 
-					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, NULL);
-					CLOSE(events[n].data.fd);
+					epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
+					CLOSE(fd);
 				}
 			}
 		}

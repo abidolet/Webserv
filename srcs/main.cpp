@@ -48,7 +48,7 @@ int main (int argc, char *argv[])
 	}
 	else
 	{
-		Log(Log::WARNING) << "Usage: ./webserv [config_file]" << Log::endl();
+		Log(Log::ERROR) << "Usage: ./webserv [config_file]" << Log::endl();
 		return (1);
 	}
 
@@ -61,7 +61,7 @@ int main (int argc, char *argv[])
 	{
 		if (static_cast<std::string>(e.what()) != "exit")
 		{
-			Log(Log::ERROR) << e.what() << Log::endl();
+			Log(Log::ERROR) << e.what() << strerror(errno) << Log::endl();
 			return (1);
 		}
 	}

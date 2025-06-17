@@ -98,8 +98,9 @@ class	Webserv
 	private:
 		std::vector<Server>	_servers;
 
-		int					_epoll_fd;
-		int					_listener_fd;
+		int								_epoll_fd;
+		std::vector<int>				_listener_fds;
+		std::map<int, int>				_client_to_server;
 
 		std::string			cookies;
 
@@ -109,7 +110,7 @@ class	Webserv
 
 		void	run();
 
-		std::string	handleGetRequest(std::string& path) const;
+		std::string	handleGetRequest(const Server&	server, std::string& path) const;
 		std::string	handlePostRequest(const std::string& body) const;
 		std::string	handleDeleteRequest(const std::string& request) const;
 
