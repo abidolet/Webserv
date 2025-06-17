@@ -63,7 +63,7 @@ int main (int argc, char *argv[])
 	{
 		if (static_cast<std::string>(e.what()) != "exit")
 		{
-			Log(Log::ERROR) << e.what() << strerror(errno) << Log::endl();
+			Log(Log::ERROR) << e.what() << Log::endl();
 			return (1);
 		}
 	}
