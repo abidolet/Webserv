@@ -44,6 +44,18 @@ private:
 
 };
 
+struct Session
+{
+	std::string	key;
+	size_t	uid;
+	size_t		visitCount;
+
+	static Session		registerSession(const std::string& key); // use the $USER for seed ?
+	static Session		stringToSession(std::string &str);
+	static std::string	sessionToString(const Session& session);
+	static Session*		find(std::vector<Session> &sessions, size_t);
+	static Session*		find(std::vector<Session> &sessions, const std::string &key);
+};
 
 struct	Server
 {
@@ -72,6 +84,7 @@ struct	Server
 	std::map<std::string, int>	listen;
 
 	std::vector<std::string>	cookies;
+	std::map<std::string, int>	sessions;
 
 private:
 	void	setupMaxBodySize(Block& block);
@@ -79,7 +92,6 @@ private:
 	void	setupListen(Block &block);
 
 };
-
 
 class	Webserv
 {

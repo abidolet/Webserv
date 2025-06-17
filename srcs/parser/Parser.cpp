@@ -134,7 +134,7 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 		{
 			it->dirAssert(std::vector<std::string>(cookiesOptions, cookiesOptions + 1));
 			serv.cookies = it->loadDirectives("set");
-			//! assert cookies
+			serv.cookiesAssert();
 		}
 	}
 	serv.locations = locations;
@@ -178,6 +178,9 @@ std::vector<Server> Parser::populateServerInfos()
 		servs.push_back(serv);
 	}
 
+	if (m_block.inners.size() == 0) // empty file
+		servs.push_back(Server());
+
 	for (size_t i = 0; i < servs.size(); i++)
 	{
 		Utils::printServConfig(servs[i]);
@@ -198,8 +201,6 @@ std::string Parser::getCookies(const Server& serv) // TODO: voir avec alexis pou
 		cookies += serv.cookies[i];
 		cookies += "\r\n";
 	}
+	//TODO: need to add the session uid as a cookie
 	return cookies;
 }
-
-//TODO check le parsing:
-// [ ] mettre des str la ou y'a besoin de nombre

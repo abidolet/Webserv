@@ -18,7 +18,23 @@ void Server::init(Block &block)
 
 void Server::cookiesAssert()
 {
-
+	std::vector<std::string>::iterator it = cookies.begin();
+	for ( ; it != cookies.end(); ++it)
+	{
+		size_t i = 0;
+		std::string str = *it;
+		while (std::isalnum(str[i]) || str[i] == '_')
+			i++;
+		if (i == 0)
+			throw std::runtime_error("syntax error in cookie directive; `" + *it + "'");
+		if (str[i] == '=')
+			i++;
+		size_t last_i = i;
+		while (std::isalnum(str[i]) || str[i] == '_')
+			i++;
+		if (str[i] != '\0' || i == last_i)
+			throw std::runtime_error("syntax error in cookie directive; `" + *it + "'");
+	}
 }
 
 void Server::runSelfCheck()
@@ -82,6 +98,7 @@ std::map<std::string, int> parseSession(std::vector<std::string>& lines)
 	return sessions;
 }
 
+#if old
 //TODO voir avec alexi pour implementer le register session
 void Server::registerSession(const std::string& key)
 {
@@ -116,6 +133,46 @@ void Server::registerSession(const std::string& key)
 	if (sessions.find(key) == sessions.end())
 		stream << key << ",0\n";
 
+	stream.close();
+}
+#endif
+
+void Server::registerSession(const std::string& key)
+{
+	const std::string	sessionFilepath = "./.sessions";
+	std::fstream		stream;
+
+	stream.open(sessionFilepath.c_str(), std::fstream::out);
+	if (stream.is_open() == false)
+		throw Parser::InvalidDirOrFileException(sessionFilepath);
+
+	std::vector<Session>	sessions;
+	std::string				line;
+	while (std::getline(stream, line))
+		sessions.push_back(Session::stringToSession(line));
+	stream.close();
+
+	stream.open(sessionFilepath.c_str());
+	if (stream.is_open() == false)
+		throw Parser::InvalidDirOrFileException(sessionFilepath);
+
+	std::vector<Session>::iterator it = sessions.begin();
+	for ( ; it != sessions.end(); ++it)
+	{
+		if (it->key != key)
+			stream << Session::sessionToString(*it) << "\n";
+		else
+		{
+			it->visitCount++;
+			stream << Session::sessionToString(*it) << "\n";
+		}
+	}
+	if (Session::find(sessions, key) == NULL)
+	{
+		Session session;
+		session.key = key;
+		stream << Session::sessionToString(*it) << "\n";
+	}
 	stream.close();
 }
 

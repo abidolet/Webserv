@@ -13,7 +13,7 @@
 // [~] http redirect
 // ? Make the route able to accept uploaded files and configure where they should be saved (wtf ?) (CIG ?)
 // [~] cookies
-// [?] session managment
+// [~] session managment
 
 struct Server;
 

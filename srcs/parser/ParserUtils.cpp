@@ -26,7 +26,11 @@ namespace Utils
 		while (std::getline(stream, line))
 		{
 			if (!line.empty())
-				file.push_back(line);
+			{
+				std::string tmp = strtrim(line, " \t");
+				if (!tmp.empty())
+					file.push_back(tmp);
+			}
 		}
 
 		return file;
@@ -34,6 +38,8 @@ namespace Utils
 
 	std::string strtrim(std::string str, const std::string set)
 	{
+		if (str.find_first_not_of(set) == (size_t)-1)
+				return "";
 		str = str.substr(str.find_first_not_of(set));
 		str = str.substr(0, str.find_last_not_of(set) + 1);
 		return str;
@@ -229,7 +235,7 @@ namespace Utils
 				}
 			}
 			else
-				Log(Log::DEBUG) << "\t|->" << "no cookies ﾍ( ´Д`)ﾉ" << Log::endl();
+				Log(Log::DEBUG) << "\t|->" << "no cookies" << BOLD << RED << "ﾍ( ´Д`)ﾉ" << Log::endl();
 		}
 
 		// printing each location

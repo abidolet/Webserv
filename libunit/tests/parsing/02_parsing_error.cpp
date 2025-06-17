@@ -13,7 +13,7 @@ int	Err_listen1()
 	Block block("server");
 	block.directives.push_back("listen 8080:");
 	Server serv;
-	
+
 	try
 	{
 		serv.init(block);
@@ -33,7 +33,7 @@ int	Err_listen2()
 	Block block("server");
 	block.directives.push_back("listen 0.0.0.0:");
 	Server serv;
-	
+
 	try
 	{
 		serv.init(block);
@@ -53,7 +53,7 @@ int	Err_listen3()
 	Block block("server");
 	block.directives.push_back("listen :8080");
 	Server serv;
-	
+
 	try
 	{
 		serv.init(block);
@@ -73,7 +73,7 @@ int	Err_listen4()
 	Block block("server");
 	block.directives.push_back("listen 0.0.00:8080");
 	Server serv;
-	
+
 	try
 	{
 		serv.init(block);
@@ -93,7 +93,7 @@ int	Err_listen5()
 	Block block("server");
 	block.directives.push_back("listen 0.0.0.0.0.0:8080");
 	Server serv;
-	
+
 	try
 	{
 		serv.init(block);
@@ -113,7 +113,7 @@ int	Err_listen6()
 	Block block("server");
 	block.directives.push_back("listen :0.0.0.0:8080");
 	Server serv;
-	
+
 	try
 	{
 		serv.init(block);
@@ -133,15 +133,15 @@ int	Err_noBeginBrace()
 	try
 	{
 		Parser parser("./configs/errors/noBeginBrace.conf");
-		Server serv = parser.populateServerInfos();
-		
+		Server serv = parser.populateServerInfos()[0];
+
 	}
 	catch(const std::exception& e)
 	{
 		return 0;
 	}
-	
-	
+
+
 	return 1;
 }
 
@@ -153,14 +153,14 @@ int	Err_noEndBrace()
 	try
 	{
 		Parser parser("./configs/errors/noEndBrace.conf");
-		Server serv = parser.populateServerInfos();
-		
+		Server serv = parser.populateServerInfos()[0];
+
 	}
 	catch(const std::exception& e)
 	{
 		return 0;
 	}
-	
+
 	return 1;
 }
 
@@ -171,14 +171,14 @@ int	Err_Cgi()
 	try
 	{
 		Parser parser("./configs/errors/Cgi.conf");
-		Server serv = parser.populateServerInfos();
-		
+		Server serv = parser.populateServerInfos()[0];
+
 	}
 	catch(const std::exception& e)
 	{
 		return 0;
 	}
-	
+
 	return 1;
 }
 
@@ -189,14 +189,14 @@ int	Err_wrongLocation()
 	try
 	{
 		Parser parser("./configs/errors/invalidDirName.conf");
-		Server serv = parser.populateServerInfos();
-		
+		Server serv = parser.populateServerInfos()[0];
+
 	}
 	catch(const std::exception& e)
 	{
 		return 0;
 	}
-	
+
 	return 1;
 }
 
@@ -204,58 +204,93 @@ int	Err_Cookies1()
 {
 	Libunit::Redirect_log();
 	Parser parser("./configs/ok/empty.conf");
-	Server serv = parser.populateServerInfos();
+	Server serv = parser.populateServerInfos()[0];
 
 	serv.cookies.push_back("=");
-	serv.cookiesAssert();
+	try
+	{
+		serv.cookiesAssert();
+	}
+	catch (std::exception& e)
+	{
+		return 0;
+	}
 
-	return 0;
+	return 1;
 }
 
 int	Err_Cookies2()
 {
 	Libunit::Redirect_log();
 	Parser parser("./configs/ok/empty.conf");
-	Server serv = parser.populateServerInfos();
+	Server serv = parser.populateServerInfos()[0];
 
 	serv.cookies.push_back("=test");
-	serv.cookiesAssert();
+	try
+	{
+		serv.cookiesAssert();
+	}
+	catch (std::exception& e)
+	{
+		return 0;
+	}
 
-	return 0;
+	return 1;
 }
 
 int	Err_Cookies3()
 {
 	Libunit::Redirect_log();
 	Parser parser("./configs/ok/empty.conf");
-	Server serv = parser.populateServerInfos();
+	Server serv = parser.populateServerInfos()[0];
 
 	serv.cookies.push_back("test=");
-	serv.cookiesAssert();
+	try
+	{
+		serv.cookiesAssert();
+	}
+	catch (std::exception& e)
+	{
+		return 0;
+	}
 
-	return 0;
+	return 1;
 }
 
 int	Err_Cookies4()
 {
 	Libunit::Redirect_log();
 	Parser parser("./configs/ok/empty.conf");
-	Server serv = parser.populateServerInfos();
+	Server serv = parser.populateServerInfos()[0];
 
 	serv.cookies.push_back("test test");
-	serv.cookiesAssert();
+	try
+	{
+		serv.cookiesAssert();
+	}
+	catch (std::exception& e)
+	{
+		return 0;
+	}
 
-	return 0;
+	return 1;
 }
 
 int	Err_Cookies5()
 {
 	Libunit::Redirect_log();
 	Parser parser("./configs/ok/empty.conf");
-	Server serv = parser.populateServerInfos();
+	Server serv = parser.populateServerInfos()[0];
 
 	serv.cookies.push_back("=test=");
-	serv.cookiesAssert();
+	try
+	{
+		serv.cookiesAssert();
+	}
+	catch (std::exception& e)
+	{
+		return 0;
+	}
 
-	return 0;
+	return 1;
 }

@@ -8,6 +8,7 @@ CXX = c++
 CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98 -fPIE
 
 ifeq ($(MODE), debug)
+	CXX = g++
 	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -g3 -std=c++98
 endif
 
@@ -22,6 +23,7 @@ SRCS =	main.cpp		\
 		CgiHandler.cpp	\
 		Server.cpp		\
 		Location.cpp	\
+		Session.cpp		\
 
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))

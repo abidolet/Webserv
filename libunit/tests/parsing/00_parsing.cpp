@@ -6,7 +6,7 @@
 /*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/26 10:49:49 by mjuncker          #+#    #+#             */
-/*   Updated: 2025/06/16 10:36:17 by mjuncker         ###   ########.fr       */
+/*   Updated: 2025/06/16 13:28:52 by mjuncker         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ int routine_parsing_ok( void )
 	routine.AddNewTest(Libunit::Test("PARSING",		"whitespace",	&whitespace));
 	routine.AddNewTest(Libunit::Test("PARSING",		"mutlLocation",	&multLocation));
 	routine.AddNewTest(Libunit::Test("PARSING",		"page path",	&pagePath));
+	routine.AddNewTest(Libunit::Test("PARSING",		"empty",		&empty));
 	// ==================================================
 
 	routine.Run();
