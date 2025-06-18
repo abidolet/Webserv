@@ -6,9 +6,11 @@
 
 struct Server;
 
+
 namespace Utils
 {
-
+	
+	int LevenshteinDistance(const std::string& s1, const std::string& s2);
 	std::string strUnite(std::vector<std::string> strs, std::string separator);
 	std::vector<std::string> strsplit(std::string str, const char c);
 	std::string findClosest(std::string str, std::vector<std::string> options);

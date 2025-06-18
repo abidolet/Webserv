@@ -92,17 +92,20 @@ namespace Utils
 
 	std::string findClosest(std::string str, std::vector<std::string> options)
 	{
-		int idx = 0;
-		int	str_val = getStrValue(str);
-		std::vector<std::string> strs;
+		int		idx = 0;
+		uint	min = -1;
+
+		std::vector<std::string> lowers;
 
 		str = toLower(str);
-		strs = toLowers(options);
+		lowers = toLowers(options);
 
 		for (size_t i = 0; i < options.size(); i++)
 		{
-			if (std::abs(getStrValue(strs[i]) - str_val) < std::abs(getStrValue(strs[idx]) - str_val))
+			uint distance = LevenshteinDistance(str, lowers[i]);
+			if (distance < min)
 			{
+				min = distance;
 				idx = i;
 			}
 		}

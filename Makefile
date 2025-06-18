@@ -9,7 +9,7 @@ CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98 -fP
 
 ifeq ($(MODE), debug)
 	CXX = g++
-	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -g3 -std=c++98
+	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -g3
 endif
 
 VPATH = srcs:srcs/parser:srcs/server:srcs/cgi
@@ -24,6 +24,7 @@ SRCS =	main.cpp		\
 		Server.cpp		\
 		Location.cpp	\
 		Session.cpp		\
+		Levenshtein.cpp	\
 
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
