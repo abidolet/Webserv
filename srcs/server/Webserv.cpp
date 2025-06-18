@@ -2,16 +2,9 @@
 #include "Parser.hpp"
 #include "Log.hpp"
 #include <sys/epoll.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <unistd.h>
 #include <fcntl.h>
-#include <cstring>
-#include <sstream>
-#include <string>
 #include <sys/stat.h>
-#include <dirent.h>
-#include <stdlib.h>
 #include <algorithm>
 
 #define MAX_EVENTS 1024
@@ -36,26 +29,22 @@ Webserv::~Webserv()
 
 std::string	toString(int value)
 {
-	std::ostringstream oss;
+	std::ostringstream	oss;
 	oss << value;
 	return (oss.str());
 }
 
-std::string Webserv::getErrorPage(int error_code) const
+const std::string	Webserv::getErrorPage(const int error_code, const Server& server) const
 {
-	const Server&	server = _servers[0];
-	std::map<int, std::string>::const_iterator it = server.error_pages.find(error_code);
+	Log(Log::DEBUG) << "Searching custom error page for code" << error_code << Log::endl();
 
+	std::map<int, std::string>::const_iterator it = server.error_pages.find(error_code);
 	if (it != server.error_pages.end())
 	{
-		Log(Log::DEBUG) << "Searching custom error page for code" << error_code << ":" << it->second << Log::endl();
-
-		std::string		error_path = it->second;
-		std::ifstream	file(error_path.c_str(), std::ios::binary);
-
+		std::ifstream	file(it->second.c_str(), std::ios::binary);
 		if (file)
 		{
-			Log(Log::DEBUG) << "Custom error page found:" << error_path << Log::endl();
+			Log(Log::DEBUG) << "Custom error page found:" << it->second << Log::endl();
 
 			std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 			std::ostringstream	oss;
@@ -67,11 +56,9 @@ std::string Webserv::getErrorPage(int error_code) const
 				"Connection: close\r\n\r\n" +
 				content);
 		}
-		else
-		{
-			Log(Log::DEBUG) << "Custom error page not found:" << error_path << Log::endl();
-		}
 	}
+
+	Log(Log::DEBUG) << "Custom error page not found, returning default" << Log::endl();
 
 	std::ostringstream	oss;
 	oss << error_code;
@@ -87,45 +74,67 @@ std::string Webserv::getErrorPage(int error_code) const
 		default_content);
 }
 
-std::string Webserv::getStatusMessage(int code) const
+const std::string	Webserv::getStatusMessage(const int code) const
 {
 	switch(code)
 	{
 		case 403:	return ("Forbidden");
 		case 404:	return ("Not Found");
 		case 405:	return ("Method Not Allowed");
-		default:	return ("Error");
+		case 413:	return ("Payload Too Large");
+		case 500:	return ("Internal Server Error");
+		default:	return ("Unknown code");
 	}
 }
 
-HttpRequest	parseRequest(const std::string& rawRequest)
+std::string	longestCommonPrefix(const std::string& s1, const std::string& s2)
 {
-	HttpRequest			request;
+	size_t	i = 0;
+	size_t	size = std::min(s1.length(), s2.length());
+
+	while (i < size && s1[i] == s2[i])
+	{
+		i++;
+	}
+
+	return (s1.substr(0, i));
+}
+
+const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Server& server) const
+{
 	std::istringstream	stream(rawRequest);
 	std::string			line;
+	HttpRequest			request;
 
 	if (std::getline(stream, line))
 	{
+		Log(Log::DEBUG) << "Request line:" << line << Log::endl();
+
 		std::istringstream	request_line(line);
 		request_line >> request.method >> request.path;
+
+		Log(Log::DEBUG) << "Method:" << request.method << "| Path:" << request.path << Log::endl();
 	}
 
-	size_t		pos;
-	std::string	key;
-	std::string	value;
-	while (std::getline(stream, line) && line != "\r")
+	Log(Log::DEBUG) << "Headers:" << Log::endl();
+	while (std::getline(stream, line) && line != "\r" && !line.empty())
 	{
-
-		pos = line.find(':');
+		Log(Log::DEBUG) << "Header line:" << line << Log::endl();
+		size_t	pos = line.find(':');
 		if (pos != std::string::npos)
 		{
-			size_t	start = value.find_first_not_of(" \t\r\n");
+			std::string	key = line.substr(0, pos);
+			std::string	value = line.substr(pos + 1);
+
+			size_t		start = value.find_first_not_of(" \t\r\n");
 			if (start != std::string::npos)
 			{
 				size_t	end = value.find_last_not_of(" \t\r\n");
 				value = value.substr(start, end - start + 1);
 			}
+
 			request.headers[key] = value;
+			Log(Log::DEBUG) << "Header parsed:" << key << "=" << value << Log::endl();
 		}
 	}
 
@@ -133,82 +142,108 @@ HttpRequest	parseRequest(const std::string& rawRequest)
 	if (body_pos != std::string::npos)
 	{
 		request.body = rawRequest.substr(body_pos + 4);
-	}
-	return (request);
-}
-
-std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) const
-{
-	Log(Log::DEBUG) << "Get request for:" << path << Log::endl();
-
-	while (path != "/" && path[path.size() - 1] == '/')
-	{
-		path.erase(path.size() - 1);
+		Log(Log::DEBUG) << "Body size:" << request.body.size() << "bytes" << Log::endl();
 	}
 
-	Log(Log::DEBUG) << "Get request cleaned path:" << path << Log::endl();
-
-	std::string::size_type	pos = path.find_last_of("/");
-	std::string	to_find = path.substr(0, pos);
-	std::string	filename = path.substr(pos + 1);
-	if (pos == 0)
-	{
-		to_find = path;
-		filename = "";
-	}
-	Log(Log::DEBUG) << "Get request to_find:" << to_find << Log::endl();
-	Log(Log::DEBUG) << "Get request filename:" << filename << Log::endl();
-
-	Log(Log::DEBUG) << "Searching for location with path:" << to_find << Log::endl();
+	Log(Log::DEBUG) << "Checking location for:" << request.path << Log::endl();
+	const Location*	best_match = NULL;
+	size_t	best_match_length = 0;
+	request.method_allowed = false;
 
 	for (size_t	i = 0; i < server.locations.size(); ++i)
 	{
-		Log(Log::DEBUG) << "Checking location:" << server.locations[i].root << Log::endl();
-		if (server.locations[i].root == to_find)
+		const Location& loc = server.locations[i];
+		Log(Log::DEBUG) << "Checking location" << i << ":" << loc.root << Log::endl();
+
+		if (request.path.compare(0, loc.root.length(), loc.root) == 0)
 		{
-			Log(Log::DEBUG) << "Location found for path:" << to_find << Log::endl();
-			path = server.locations[i].path + '/' + filename;
-			DIR*	dir = opendir(path.c_str());
-			if (dir)
+			Log(Log::DEBUG) << "Potential match found:" << loc.root << "(length:" << loc.root.length() << ")" << Log::endl();
+
+			if (loc.root.length() > best_match_length)
 			{
-				Log(Log::DEBUG) << "Directory opened successfully:" << path << Log::endl();
-				closedir(dir);
-				path += '/' + server.locations[i].index;
-			}
-			break ;
-		}
-		else if (i == server.locations.size() - 1)
-		{
-			Log(Log::DEBUG) << "No location found for path, adding root" << Log::endl();
-			path = server.root + path;
-			DIR*	dir = opendir(path.c_str());
-			if (dir)
-			{
-				Log(Log::DEBUG) << "Directory opened successfully:" << path << Log::endl();
-				closedir(dir);
-				return (getErrorPage(403));
+				best_match = &loc;
+				best_match_length = loc.root.length();
+				Log(Log::DEBUG) << "New best match:" << best_match->root << Log::endl();
 			}
 		}
 	}
 
-	std::string	full_path = path;
-
-	Log(Log::DEBUG) << "Get request final:" << full_path << Log::endl();
-
-	struct stat	statbuf;
-	if (stat(full_path.c_str(), &statbuf) != 0)
+	if (best_match)
 	{
-		Log(Log::WARNING) << "File not found:'" << full_path << "'" << Log::endl();
-		return (getErrorPage(404));
+		Log(Log::DEBUG) << "Best location match:" << best_match->root << "with path:" << best_match->path << Log::endl();
+
+		Log(Log::DEBUG) << "Checking allowed methods for location..." << Log::endl();
+		for (std::vector<std::string>::const_iterator it = best_match->allowed_methods.begin();
+			it != best_match->allowed_methods.end(); ++it)
+		{
+			if (*it == request.method)
+			{
+				request.method_allowed = true;
+				break ;
+			}
+		}
+
+		if (!request.method_allowed)
+		{
+			Log(Log::WARNING) << "Method" << request.method << "not allowed for this location" << Log::endl();
+			return (request);
+		}
+
+		std::string	full_path = best_match->path + '/' + request.path.substr(best_match->root.length());
+		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
+
+		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
+
+		struct stat	statbuf;
+		if (stat(full_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
+		{
+			Log(Log::DEBUG) << "Path is a directory" << Log::endl();
+			if (full_path[full_path.length() - 1] != '/')
+			{
+				full_path += '/';
+				Log(Log::DEBUG) << "Added trailing slash:" << full_path << Log::endl();
+			}
+			full_path += best_match->index;
+			Log(Log::DEBUG) << "Added index file:" << full_path << Log::endl();
+		}
+
+		request.path = full_path;
+		request.method_allowed = true;
+		Log(Log::DEBUG) << "Final path:" << request.path << Log::endl();
+	}
+	else
+	{
+		Log(Log::WARNING) << "No matching location found for path:" << request.path << Log::endl();
+		if (std::find(server.allowed_methods.begin(), server.allowed_methods.end(), request.method) != server.allowed_methods.end())
+		{
+			request.method_allowed = true;
+		}
 	}
 
-	Log(Log::DEBUG) << "File found:'" << full_path << "'" << Log::endl();
+	return (request);
+}
 
-	std::ifstream	file(full_path.c_str(), std::ios::binary);
+const std::string	Webserv::handleGetRequest(std::string& path, const Server& server) const
+{
+	struct stat	statbuf;
+	if (stat(path.c_str(), &statbuf) != 0)
+	{
+		Log(Log::WARNING) << "File not found:'" << path << "'" << Log::endl();
+		return (getErrorPage(404, server));
+	}
+	if (S_ISDIR(statbuf.st_mode))
+	{
+		Log(Log::WARNING) << "Cannot open directory:'" << path << "'" << Log::endl();
+		return (getErrorPage(403, server));
+	}
+
+	Log(Log::DEBUG) << "File found:" << path << Log::endl();
+
+	std::ifstream	file(path.c_str(), std::ios::binary);
 	if (!file)
 	{
-		Log(Log::WARNING) << "Cannot open " << full_path << Log::endl();
-		return (getErrorPage(403));
+		Log(Log::WARNING) << "Cannot open " << path << Log::endl();
+		return (getErrorPage(403, server));
 	}
 
 	std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -223,8 +258,14 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 	return (response);
 }
 
-std::string	Webserv::handlePostRequest(const std::string& body) const
+const std::string	Webserv::handlePostRequest(const std::string& body, const Server& server) const
 {
+	if (body.size() > server.client_max_body_size)
+	{
+		Log(Log::WARNING) << "Body size exceeds client_max_body_size" << Log::endl();
+		return (getErrorPage(413, server));
+	}
+
 	std::ostringstream	oss;
 	oss << body.size();
 	std::string	content_length = oss.str();
@@ -241,17 +282,20 @@ std::string	Webserv::handlePostRequest(const std::string& body) const
 	return (response);
 }
 
-std::string	Webserv::handleDeleteRequest(const std::string& request) const
+const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const
 {
-	std::string	path = "www" + request;
-
 	Log() << "Delete request for: " << path << Log::endl();
 
 	struct stat	statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
-		Log(Log::ERROR) << "File not found: '" << path << "'" << Log::endl();
-		return (getErrorPage(404));
+		Log(Log::WARNING) << "File not found:" << path << "'" << Log::endl();
+		return (getErrorPage(404, server));
+	}
+	if (S_ISDIR(statbuf.st_mode))
+	{
+		Log(Log::WARNING) << "Cannot delete directory:" << path << Log::endl();
+		return (getErrorPage(403, server));
 	}
 
 	if (remove(path.c_str()) == 0)
@@ -262,15 +306,17 @@ std::string	Webserv::handleDeleteRequest(const std::string& request) const
 	else
 	{
 		Log(Log::ERROR) << "Cannot delete " << path << Log::endl();
-		return (getErrorPage(403));
+		return (getErrorPage(403, server));
 	}
 }
-
-
 
 void Webserv::run()
 {
 	Log() << "Running web server..." << Log::endl();
+
+	Log(Log::ALERT) << "Coucou c'est moi! Parse moi le directory listing stp." << Log::endl();
+	Log(Log::ALERT) << "Rajoute juste un booleen en off par defaut dans le bloc location" << Log::endl();
+	Log(Log::ALERT) << "Ca ressemble a ca dans le fichier de conf: directory_listing on (ou off)" << Log::endl();
 
 	_epoll_fd = epoll_create(10);
 	if (_epoll_fd == -1)
@@ -278,16 +324,17 @@ void Webserv::run()
 		throw std::runtime_error("Failed to create epoll instance: " + static_cast<std::string>(strerror(errno)));
 	}
 
-	Log(Log::DEBUG) << "Webserv started on" << _servers.size() << "server(s)" << Log::endl();
-
-	for (size_t i = 0; i < _servers.size(); ++i)
+	for (size_t	i = 0; i < _servers.size(); ++i)
 	{
 		Log(Log::DEBUG) << "Initializing server" << i << Log::endl();
+
 		int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (listener_fd < 0)
 		{
 			throw std::runtime_error("Failed to create socket: " + static_cast<std::string>(strerror(errno)));
 		}
+
+		_listener_fds.push_back(listener_fd);
 
 		int	opt = 1;
 		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
@@ -296,7 +343,7 @@ void Webserv::run()
 		}
 		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1)
 		{
-			throw std::runtime_error("setsockopt failed:" + static_cast<std::string>(strerror(errno)));
+			throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
 		}
 
 		if (fcntl(listener_fd, F_SETFL, O_NONBLOCK | FD_CLOEXEC) == -1)
@@ -332,8 +379,6 @@ void Webserv::run()
 		{
 			throw std::runtime_error("epoll_ctl failed: " + static_cast<std::string>(strerror(errno)));
 		}
-
-		_listener_fds.push_back(listener_fd);
 	}
 
 	struct epoll_event	events[MAX_EVENTS];
@@ -355,7 +400,7 @@ void Webserv::run()
 			if (it != _listener_fds.end())
 			{
 				int	client = accept(fd, NULL, NULL);
-				
+
 				if (client < 0)
 				{
 					Log(Log::ERROR) << "accept failed:" << strerror(errno) << Log::endl();
@@ -394,16 +439,12 @@ void Webserv::run()
 					request.append(buffer, bytes_read);
 				}
 
-				HttpRequest	httpReq = parseRequest(request);
-				CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
-				std::string	response;
-
 				struct sockaddr_in	addr;
 				socklen_t			addr_len = sizeof(addr);
 				getsockname(fd, (struct sockaddr*)&addr, &addr_len);
 				uint16_t			port = ntohs(addr.sin_port);
 
-				Server::registerSession(addr.sin_addr.s_addr);
+				std::string	response;
 
 				Server*	server = NULL;
 				for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
@@ -415,10 +456,19 @@ void Webserv::run()
 						break ;
 					}
 				}
-
 				if (!server)
 				{
-					response = getErrorPage(500);
+					response = getErrorPage(500, *server);
+				}
+
+				HttpRequest	httpReq = parseRequest(request, *server);
+				CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
+
+				Server::registerSession(addr.sin_addr.s_addr);
+
+				if (!httpReq.method_allowed)
+				{
+					response = getErrorPage(405, *server);
 				}
 				else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
 				{
@@ -428,39 +478,15 @@ void Webserv::run()
 				}
 				else if (httpReq.method == "GET")
 				{
-					// if (!getAllowed)
-					// {
-					// 	Log(Log::ERROR) << "Method GET not allowed" << Log::endl();
-					// 	response = getErrorPage(405);
-					// }
-					// else
-					// {
-						response = handleGetRequest(*server, httpReq.path);
-					// }
+					response = handleGetRequest(httpReq.path, *server);
 				}
 				else if (httpReq.method == "POST")
 				{
-					// if (!postAllowed)
-					// {
-						// Log(Log::ERROR) << "Method POST not allowed" << Log::endl();
-						// response = getErrorPage(405);
-					// }
-					// else
-					// {
-						response = handlePostRequest(httpReq.body);
-					// }
+					response = handlePostRequest(httpReq.body, *server);
 				}
 				else if (httpReq.method == "DELETE")
 				{
-					// if (!deleteAllowed)
-					// {
-						// Log(Log::ERROR) << "Method DELETE not allowed" << Log::endl();
-						// response = getErrorPage(405);
-					// }
-					// else
-					// {
-						response = handleDeleteRequest(httpReq.path);
-					// }
+					response = handleDeleteRequest(httpReq.path, *server);
 				}
 
 				if (send(fd, response.c_str(), response.size(), 0) == -1)
