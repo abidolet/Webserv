@@ -10,7 +10,7 @@
 #include "CgiHandler.hpp"
 
 #ifndef RUN_SERV_SELF_CHECK
-# define RUN_SERV_SELF_CHECK 0
+# define RUN_SERV_SELF_CHECK 1
 #endif
 
 struct 	Location
@@ -95,6 +95,7 @@ struct	HttpRequest
 	std::string							body;
 	std::string							path;
 	std::map<std::string, std::string>	headers;
+	Location							location;
 	bool								method_allowed;
 };
 
@@ -108,7 +109,7 @@ class	Webserv
 		std::string			cookies;
 
 		const HttpRequest	parseRequest(const std::string& rawRequest, const Server& server) const;
-		const std::string	handleGetRequest(const std::string& path, const Server& server) const;
+		const std::string	handleGetRequest(HttpRequest& request, const Server& server) const;
 		const std::string	handlePostRequest(const std::string& body, const Server& server) const;
 		const std::string	handleDeleteRequest(const std::string& path, const Server& server) const;
 

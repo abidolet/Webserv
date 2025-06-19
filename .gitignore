@@ -58,3 +58,4 @@ webserv
 libwebserv.a
 .idea/
 .sessions
+.vscode/

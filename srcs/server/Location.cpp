@@ -8,8 +8,8 @@ void assertLocation(const Location& location, const Block& block)
 	if (location.path[0] != '/')
 		throw std::runtime_error("`path' directive must be an absolute path");
 
-	// if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
-	// 	throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
+	if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
+		throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
 
 	//? check that cgi_extension and cgi_pass are BOTH empty or filled
 	if (!location.cgi_extension.empty() != !location.cgi_pass.empty())
@@ -17,8 +17,8 @@ void assertLocation(const Location& location, const Block& block)
 }
 
 Location::Location(Block &block)
-	:	path("/"), root("/"), index("index.html"),
-		is_cgi(false), directoryListing(false), redirection(-1, "")
+	:	path("/"), root("/"), index(""),
+		is_cgi(false), directoryListing(true), redirection(-1, "")
 {
 	setupLocationRoot(block);
 	block.loadSingleDirective("path", path);

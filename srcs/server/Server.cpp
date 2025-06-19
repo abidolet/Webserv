@@ -128,14 +128,14 @@ void Server::runSelfCheck()
 #if RUN_SERV_SELF_CHECK
 
 	if (Utils::dirAccess(root) == false)
-		throw Parser::InvalidDirOrFileException(root);
+		Log(Log::WARNING) << Parser::InvalidDirOrFileException(root).what() << Log::endl();
 
 	// checking for invlid error_page path
 	std::map<int, std::string>::iterator it = error_pages.begin();
 	for ( ; it != error_pages.end(); ++it)
 	{
 		if (Utils::fileAccess(it->second) == false)
-			throw Parser::InvalidDirOrFileException(it->second);
+			Log(Log::WARNING) << Parser::InvalidDirOrFileException(it->second).what() << Log::endl();
 	}
 
 	// checking if mutiple location are the same

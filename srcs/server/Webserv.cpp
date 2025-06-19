@@ -6,6 +6,9 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <algorithm>
+#include <dirent.h>
+
+#include "ParserUtils.hpp"
 
 #define MAX_EVENTS 1024
 #define CLOSE(fd) if (fd > 1) {close(fd); fd = -1;}
@@ -173,7 +176,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	if (best_match)
 	{
 		Log(Log::DEBUG) << "Best location match:" << best_match->root << "with path:" << best_match->path << Log::endl();
-
+		request.location = *best_match;
 		Log(Log::DEBUG) << "Checking allowed methods for location..." << Log::endl();
 		for (std::vector<std::string>::const_iterator it = best_match->allowed_methods.begin();
 			it != best_match->allowed_methods.end(); ++it)
@@ -225,18 +228,102 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	return (request);
 }
 
-const std::string	Webserv::handleGetRequest(const std::string& path, const Server& server) const
+std::vector<struct dirent*> getFilesInDir(const std::string path)
+{
+	std::vector<struct dirent*> files;
+
+	DIR* dir = opendir(path.c_str());
+	if (dir == NULL)
+	{
+		Log(Log::WARNING) << "Directory listing is enable but dir can't be open";
+		return files;
+	}
+	struct dirent* info;
+	while ((info = readdir(dir)) != NULL)
+	{
+		files.push_back(info); // TODO: maybe add other info
+		std::string file = path.c_str() + *(info->d_name);
+	}
+	closedir(dir);
+	return files;
+}
+
+std::string getElt(struct dirent* file, const std::string& path)
+{
+	Log(Log::WARNING) << path + file->d_name << Log::endl();
+	std::stringstream ss;
+	ss << "<li><a style='color: white;' href='";
+	ss << path + file->d_name;
+	ss << "'>";
+	ss << file->d_name;
+	ss << "</a></li>\r\n";
+	return ss.str();
+}
+
+std::string getURL(HttpRequest& request, std::string path)
+{
+	if (request.path.find(request.location.path) == (size_t)-1)
+		throw std::runtime_error("path not found in request wtf");
+
+	int idx = request.path.find(request.location.path) + request.location.path.size();
+	std::string tmp = path.substr(idx);
+	std::string final = request.location.root + tmp;
+	return (final);
+}
+
+std::string getDirectoryListing(HttpRequest& request)
+{
+	std::stringstream ss;
+	std::vector<struct dirent*> files = getFilesInDir(request.path);
+	
+	// printMap<std::string, std::string>(request.headers);
+	ss << 	"<!DOCTYPE html>\r\n";
+	ss << "<html>\r\n";
+	ss << 	"<head>\r\n";
+	ss << 		"<title>directory</title>\r\n";
+	ss <<	"</head>\r\n";
+	ss << 	"<body style='color:white; background-color:black;'>\r\n";
+	ss << 		"<h1><bold>" + request.path + "<bold></h1>\r\n";
+	ss << 			"<ul>\r\n";
+	for (size_t i = 0; i < files.size(); i++)
+	{
+		ss << getElt(files[i], getURL(request, request.path));
+	}
+	ss << 			"</ul>\r\n";
+	ss << 	"</body>\r\n";
+	ss << "</html>\r\n";
+
+	std::string	content = ss.str();
+	std::ostringstream oss;
+	oss << content.size();
+
+	std::string	response = "HTTP/1.1 200 OK\r\n";
+	response += "Content-Type: text/html\r\n";
+	response += "Content-Length: " + oss.str() + "\r\nConnection: close\r\n\r\n";
+	response += content;
+
+	std::cout << response << std::endl;
+
+	return response;
+}
+
+const std::string	Webserv::handleGetRequest(	HttpRequest& request, const Server& server) const
 {
 	struct stat	statbuf;
+	std::string path = request.path;
+	if (path.find(".") == (size_t)-1)
+	{
+		// dir listing
+		if (request.location.directoryListing)
+			return getDirectoryListing(request);
+		
+		Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
+		return (getErrorPage(403, server));
+	}
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
 		Log(Log::WARNING) << "File not found:'" << path << "'" << Log::endl();
 		return (getErrorPage(404, server));
-	}
-	if (S_ISDIR(statbuf.st_mode))
-	{
-		Log(Log::WARNING) << "Cannot open directory:'" << path << "'" << Log::endl();
-		return (getErrorPage(403, server));
 	}
 
 	Log(Log::DEBUG) << "File found:" << path << Log::endl();
@@ -475,7 +562,7 @@ void Webserv::run()
 				}
 				else if (httpReq.method == "GET")
 				{
-					response = handleGetRequest(httpReq.path, *server);
+					response = handleGetRequest(httpReq, *server);
 				}
 				else if (httpReq.method == "POST")
 				{
