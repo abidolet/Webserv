@@ -195,20 +195,6 @@ std::vector<Server> Parser::populateServerInfos()
 	}
 
 	Log(Log::SUCCESS) << m_filepath << " was parsed successfuly" << Log::endl();
-	return servs; // TODO: voir avec alexis pour return le vec de serv a la place de juste le prems
+	return servs;
 }
 
-std::string Parser::getCookies(const Server& serv) // TODO: voir avec alexis pour mettre les cookies
-{
-	const std::string declaration = "Set-Cookie: ";
-	std::string cookies;
-
-	for (size_t i = 0; i < serv.cookies.size(); i++)
-	{
-		cookies += declaration;
-		cookies += serv.cookies[i];
-		cookies += "\r\n";
-	}
-	//TODO: need to add the session uid as a cookie
-	return cookies;
-}

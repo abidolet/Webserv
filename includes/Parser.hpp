@@ -8,12 +8,14 @@
 
 #include "Block.hpp"
 
+#define SESSION_FILEPATH "./.sessions"
+
 // TODO
-// [~] directory listing
-// [~] http redirect
+// [x] directory listing
+// [x] http redirect
 // ? Make the route able to accept uploaded files and configure where they should be saved (wtf ?) (CIG ?)
 // [~] cookies
-// [~] session managment
+// [x] session managment
 
 struct Server;
 
@@ -28,8 +30,6 @@ public:
 	~Parser() {};
 
 	std::vector<Server> populateServerInfos();
-
-	std::string getCookies(const Server& serv);
 
 private:
 	Block	loadBlock(std::vector<std::string>::iterator& it, const std::string &name);

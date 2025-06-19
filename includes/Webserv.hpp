@@ -10,7 +10,7 @@
 #include "CgiHandler.hpp"
 
 #ifndef RUN_SERV_SELF_CHECK
-# define RUN_SERV_SELF_CHECK 0
+# define RUN_SERV_SELF_CHECK 1
 #endif
 
 struct	HttpRequest
@@ -56,9 +56,7 @@ struct Session
 	static Session		stringToSession(std::string &str);
 	static Session*		find(std::vector<Session> &sessions, size_t uid);
 };
-
 std::ostream& operator<<(std::ostream& stream, const Session& session);
-
 
 struct	Server
 {
@@ -68,26 +66,29 @@ struct	Server
 		listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
 	}
 
+	std::string handlePostRequest(std::string body) const;
 	void		init(Block& block);
 	void		runSelfCheck();
+
 	void		cookiesAssert();
+	std::string	getCookies() const;
 
 	Location*	searchLocationByName(const std::string &name);
 	static void	registerSession(const uint uid);
-
+	
 	std::string					root;
-
+	
 	std::string					server_name;
 	size_t						client_max_body_size;
-
+	
 	std::vector<std::string>	allowed_methods;
 	std::vector<Location>		locations;
-
+	
 	std::map<int, std::string>	error_pages;
 	std::map<std::string, int>	listen;
-
+	
 	std::vector<std::string>	cookies;
-	static std::vector<Session>	sessions;
+	uint						lastUID;
 
 private:
 	void	setupMaxBodySize(Block& block);
@@ -114,7 +115,7 @@ class	Webserv
 		void	run();
 
 		std::string	handleGetRequest(const Server&	server, std::string& path) const;
-		std::string	handlePostRequest(const std::string& body) const;
+		std::string	handlePostRequest(const Server& serv, const std::string& body) const;
 		std::string	handleDeleteRequest(const std::string& request) const;
 
 		std::string	getErrorPage(int error_code) const;

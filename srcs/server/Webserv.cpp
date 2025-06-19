@@ -22,7 +22,6 @@ Webserv::Webserv(const std::string& file)
 {
 	Parser	parser(file);
 	_servers = parser.populateServerInfos();
-	cookies = parser.getCookies(_servers[0]);
 }
 
 Webserv::~Webserv()
@@ -217,16 +216,17 @@ std::string	Webserv::handleGetRequest(const Server&	server, std::string& path) c
 
 	std::string	response = "HTTP/1.1 200 OK\r\n";
 	response += "Content-Type: text/html\r\n";
-	response += "Content-Length: " + oss.str() + "Connection: close\r\n" + cookies + "\r\n\r\n";
+	response += "Content-Length: " + oss.str() + "Connection: close\r\n" + server.getCookies() + "\r\n\r\n";
 	response += content;
 
 	return (response);
 }
 
-std::string	Webserv::handlePostRequest(const std::string& body) const
+std::string	Webserv::handlePostRequest(const Server& serv, const std::string& body) const
 {
 	std::ostringstream	oss;
-	oss << body.size();
+	std::string r = serv.handlePostRequest(body);
+	oss << r.size();
 	std::string	content_length = oss.str();
 
 	Log() << "Post request with body: " << body << Log::endl();
@@ -234,7 +234,7 @@ std::string	Webserv::handlePostRequest(const std::string& body) const
 	std::string	response = "HTTP/1.1 200 OK\r\n";
 	response += "Content-Type: text/plain\r\n";
 	response += "Content-Length: " + content_length + "Connection: close\r\n\r\n";
-	response += body;
+	response += r;
 
 	Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
 
@@ -412,6 +412,7 @@ void Webserv::run()
 					if (s.listen.begin()->second == port)
 					{
 						server = &s;
+						server->lastUID = addr.sin_addr.s_addr;
 						break ;
 					}
 				}
@@ -447,7 +448,7 @@ void Webserv::run()
 					// }
 					// else
 					// {
-						response = handlePostRequest(httpReq.body);
+						response = handlePostRequest(*server, httpReq.body);
 					// }
 				}
 				else if (httpReq.method == "DELETE")

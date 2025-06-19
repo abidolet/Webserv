@@ -7,6 +7,64 @@
 #include "ParserUtils.hpp"
 #include "Parser.hpp"
 
+std::vector<Session> readSessions(const std::string& sessionFilepath);
+
+std::map<std::string, std::string> getData(std::string body)
+{
+	std::map<std::string, std::string> data;
+	
+	std::vector<std::string> argSplit = Utils::strsplit(body, '&');
+	std::vector<std::string>::iterator it = argSplit.begin();
+
+	for ( ; it != argSplit.end(); ++it)
+	{
+		std::vector<std::string> subSplit = Utils::strsplit(*it, '=');
+		if (subSplit.size() != 2)
+			throw std::runtime_error("wtf is that request");
+		data.insert(std::pair<std::string, std::string>(subSplit[0], subSplit[1]));
+	}
+	return data;
+}
+
+std::string Server::handlePostRequest(std::string body) const
+{
+	if (body.empty())
+		return body;
+	std::map<std::string, std::string> data;
+	try
+	{
+		data = getData(body);
+	}
+	catch(const std::exception& e)
+	{
+		return "invalid request";
+	}
+	
+	std::map<std::string, std::string>::iterator it = data.find("grant_type");
+	if (it == data.end())
+		return body;
+
+	std::stringstream ss;
+
+	if (it->second == "client_credentials")
+	{
+		ss << lastUID;
+		return ss.str();
+	}
+	if (it->second == "client_visits")
+	{
+		std::map<std::string, std::string>::iterator uid = data.find("UID");
+		if (uid == data.end())
+			return "missing uid options";
+		
+		std::vector<Session> sessions = readSessions("./.sessions");
+		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
+		return ss.str();
+	}
+
+	return body;
+}
+
 void Server::init(Block &block)
 {
 	block.loadSingleDirective("server_name", server_name);
@@ -32,10 +90,38 @@ void Server::cookiesAssert()
 		size_t last_i = i;
 		while (std::isalnum(str[i]) || str[i] == '_')
 			i++;
-		if (str[i] != '\0' || i == last_i)
+		if (str[i] != ';' && (str[i] != '\0' || i == last_i))
 			throw std::runtime_error("syntax error in cookie directive; `" + *it + "'");
 	}
 }
+
+std::string Server::getCookies() const 
+{
+	const std::string declaration = "Set-Cookie: ";
+	std::string cookies;
+
+	for (size_t i = 0; i < cookies.size(); i++)
+	{
+		cookies += declaration;
+		cookies += cookies[i];
+		cookies += "\r\n";
+	}
+	//TODO: need to add the session uid as a cookie
+	std::vector<Session> sessions = readSessions("./.sessions");
+	Session* session = Session::find(sessions, lastUID);
+	
+	if (session != NULL)
+	{
+		std::stringstream ss;
+		ss << session->uid;
+		cookies += declaration;
+		cookies += "session_uid=" + ss.str();
+		cookies += "\r\n";
+	}
+	
+	return cookies;
+}
+
 
 void Server::runSelfCheck()
 {
@@ -80,62 +166,6 @@ Location* Server::searchLocationByName(const std::string& name)
 	}
 	return NULL;
 }
-
-//TODO: assert file
-std::map<std::string, int> parseSession(std::vector<std::string>& lines)
-{
-	std::map<std::string, int> sessions;
-
-	std::vector<std::string>::iterator it = lines.begin();
-	for ( ; it != lines.end(); ++it)
-	{
-		std::vector<std::string> split = Utils::strsplit(*it, ',');
-		// if (split.size() != 3)
-		// 	throw std::runtime_error(" ");
-		char* endl;
-		sessions.insert(std::pair<std::string, int>(split[0], std::strtol(split[1].c_str(), &endl, 10)));
-	}
-	return sessions;
-}
-
-#if old
-//TODO voir avec alexi pour implementer le register session
-void Server::registerSession(const std::string& key)
-{
-	const std::string	sessionFilepath = "./.sessions";
-	std::fstream		stream;
-
-	stream.open(sessionFilepath.c_str(), std::fstream::out);
-	if (stream.is_open() == false)
-		throw Parser::InvalidDirOrFileException(sessionFilepath);
-
-	std::vector<std::string>	lines;
-	std::string					line;
-	while (std::getline(stream, line))
-		lines.push_back(line);
-	stream.close();
-
-	stream.open(sessionFilepath.c_str());
-	if (stream.is_open() == false)
-		throw Parser::InvalidDirOrFileException(sessionFilepath);
-
-	std::map<std::string, int> sessions = parseSession(lines);
-	std::map<std::string, int>::iterator it = sessions.begin();
-	for ( ; it != sessions.end(); ++it)
-	{
-		if (it->first != key)
-			stream << it->first << "," << it->second << "\n";
-		else
-		{
-			stream << key << "," << (it->second + 1);
-		}
-	}
-	if (sessions.find(key) == sessions.end())
-		stream << key << ",0\n";
-
-	stream.close();
-}
-#endif
 
 void createFile(const std::string& filepath)
 {
@@ -187,7 +217,6 @@ void Server::registerSession(const uint uid)
 		std::vector<Session>::iterator it = sessions.begin();
 		for ( ; it != sessions.end(); ++it)
 		{
-			// Log() << *it << Log::endl(); 
 			if (it->uid != uid)
 				stream << it->sessionToString() << "\n";
 			else

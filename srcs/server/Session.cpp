@@ -13,11 +13,8 @@ Session::Session(uint _uid)
 Session Session::stringToSession(std::string& str)
 {
 	std::vector<std::string> split = Utils::strsplit(str, ',');
-	// if (split.size() != 3)
-	// 	throw std::runtime_error("broken session file ");
 	char* endl;
 	Session session;
-
 	
 	size_t idx = str.find_first_of(",");
 	session.uid = std::strtol(str.substr(0, idx).c_str(), &endl, 10);

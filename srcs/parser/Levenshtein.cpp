@@ -2,8 +2,17 @@
 #include <string>
 #include <bits/stdc++.h>
 
-namespace Utils {
+static int getMin(int a, int b, int c)
+{
+	if (a < b && a < c)
+		return a;
+	if (b < a && b < c)
+		return b;
+	return c;
+}
 
+namespace Utils
+{
 	// https://en.wikipedia.org/wiki/Levenshtein_distance
 	int LevenshteinDistance(const std::string& s1, const std::string& s2)
 	{
@@ -22,11 +31,7 @@ namespace Utils {
 			for (int j = 0; j < n; j++)
 			{
 				int cost = (s1[i] == s2[j]) ? 0 : 1;
-				// std::vector<int> tmp;
-				// tmp.push_back(v0[j + 1] + 1);
-				// tmp.push_back(v1[j] + 1);
-				// tmp.push_back(v0[j] + cost);
-				v1[j + 1] = std::min({ v0[j + 1] + 1, v1[j] + 1, v0[j] + cost });
+				v1[j + 1] = getMin(v0[j + 1] + 1, v1[j] + 1, v0[j] + cost);
 			}
 			std::swap(v0, v1);
 		}
