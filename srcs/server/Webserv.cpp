@@ -37,23 +37,26 @@ const std::string	Webserv::getErrorPage(const int error_code, const Server& serv
 {
 	Log(Log::DEBUG) << "Searching custom error page for code" << error_code << Log::endl();
 
-	std::map<int, std::string>::const_iterator it = server.error_pages.find(error_code);
-	if (it != server.error_pages.end())
+	if (error_code != 500)
 	{
-		std::ifstream	file(it->second.c_str(), std::ios::binary);
-		if (file)
+		std::map<int, std::string>::const_iterator it = server.error_pages.find(error_code);
+		if (it != server.error_pages.end())
 		{
-			Log(Log::DEBUG) << "Custom error page found:" << it->second << Log::endl();
+			std::ifstream	file(it->second.c_str(), std::ios::binary);
+			if (file)
+			{
+				Log(Log::DEBUG) << "Custom error page found:" << it->second << Log::endl();
 
-			std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-			std::ostringstream	oss;
-			oss << content.size();
+				std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+				std::ostringstream	oss;
+				oss << content.size();
 
-			return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
-				"Content-Type: text/html\r\n" +
-				"Content-Length: " + oss.str() + "\r\n" +
-				"Connection: close\r\n\r\n" +
-				content);
+				return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
+					"Content-Type: text/html\r\n" +
+					"Content-Length: " + oss.str() + "\r\n" +
+					"Connection: close\r\n\r\n" +
+					content);
+			}
 		}
 	}
 
@@ -222,7 +225,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	return (request);
 }
 
-const std::string	Webserv::handleGetRequest(std::string& path, const Server& server) const
+const std::string	Webserv::handleGetRequest(const std::string& path, const Server& server) const
 {
 	struct stat	statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
@@ -301,7 +304,7 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 	if (remove(path.c_str()) == 0)
 	{
 		Log(Log::SUCCESS) << "File deleted !" << path << Log::endl();
-		return ("HTTP/1.1 200 OK\r\n\rConnection: close\r\n\r\nFile deleted successfully :)\r\n");
+		return ("HTTP/1.1 200 OK\r\n\rConnection: close\r\n\r\n");
 	}
 	else
 	{
@@ -320,60 +323,54 @@ void Webserv::run()
 		throw std::runtime_error("Failed to create epoll instance: " + static_cast<std::string>(strerror(errno)));
 	}
 
-	for (size_t	i = 0; i < _servers.size(); ++i)
+	for (size_t i = 0; i < _servers.size(); ++i)
 	{
 		Log(Log::DEBUG) << "Initializing server" << i << Log::endl();
 
-		int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
-		if (listener_fd < 0)
+		for (std::vector<std::pair<std::string, int> >::const_iterator	it = _servers[i].listen.begin(); it != _servers[i].listen.end(); ++it)
 		{
-			throw std::runtime_error("Failed to create socket: " + static_cast<std::string>(strerror(errno)));
-		}
+			int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
+			if (listener_fd < 0)
+			{
+				throw std::runtime_error("Failed to create socket: " + static_cast<std::string>(strerror(errno)));
+			}
 
-		_listener_fds.push_back(listener_fd);
+			_listener_fds.push_back(listener_fd);
 
-		int	opt = 1;
-		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-		{
-			throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
-		}
-		if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1)
-		{
-			throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
-		}
+			int	opt = 1;
+			if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+			{
+				throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
+			}
+			if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1)
+			{
+				throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
+			}
 
-		if (fcntl(listener_fd, F_SETFL, O_NONBLOCK | FD_CLOEXEC) == -1)
-		{
-			throw std::runtime_error("fcntl failed: " + static_cast<std::string>(strerror(errno)));
-		}
+			struct sockaddr_in	server_addr;
+			server_addr.sin_family = AF_INET;
+			server_addr.sin_addr.s_addr = INADDR_ANY;
+			server_addr.sin_port = htons(it->second);
 
-		struct sockaddr_in	server_addr;
-		server_addr.sin_family = AF_INET;
-		server_addr.sin_addr.s_addr = INADDR_ANY;
-		server_addr.sin_port = htons(_servers[i].listen.begin()->second);
+			Log(Log::DEBUG) << "Server listening on port " << it->second << Log::endl();
 
-		if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
-		{
-			throw std::runtime_error("bind failed: " + static_cast<std::string>(strerror(errno)));
-		}
+			if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
+			{
+				throw std::runtime_error("bind failed: " + static_cast<std::string>(strerror(errno)));
+			}
 
-		if (listen(listener_fd, 4096) == -1)
-		{
-			throw std::runtime_error("listen failed: " + static_cast<std::string>(strerror(errno)));
-		}
+			if (listen(listener_fd, SOMAXCONN) == -1)
+			{
+				throw std::runtime_error("listen failed: " + static_cast<std::string>(strerror(errno)));
+			}
 
-		struct epoll_event	ev;
-		ev.events = EPOLLIN | EPOLLET;
-		ev.data.fd = listener_fd;
-
-		// struct timeval tv;
-		// tv.tv_sec = 5;
-		// tv.tv_usec = 0;
-		// setsockopt(listener_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-
-		if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, listener_fd, &ev) == -1)
-		{
-			throw std::runtime_error("epoll_ctl failed: " + static_cast<std::string>(strerror(errno)));
+			struct epoll_event	ev;
+			ev.events = EPOLLIN | EPOLLET;
+			ev.data.fd = listener_fd;
+			if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, listener_fd, &ev) == -1)
+			{
+				throw std::runtime_error("epoll_ctl failed: " + static_cast<std::string>(strerror(errno)));
+			}
 		}
 	}
 
@@ -446,16 +443,19 @@ void Webserv::run()
 				for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 				{
 					Server& s = *s_it;
-					if (s.listen.begin()->second == port)
+					for (std::vector<std::pair<std::string, int> >::const_iterator	it = s.listen.begin(); it != s.listen.end(); ++it)
 					{
-						server = &s;
-						server->lastUID = addr.sin_addr.s_addr;
-						break ;
+						if (it->second == port)
+						{
+							server = &s;
+							server->lastUID = addr.sin_addr.s_addr;
+							break ;
+						}
 					}
 				}
 				if (!server)
 				{
-					response = getErrorPage(500, *server);
+					response = getErrorPage(500, _servers[0]);
 				}
 
 				HttpRequest	httpReq = parseRequest(request, *server);

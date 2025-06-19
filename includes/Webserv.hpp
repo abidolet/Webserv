@@ -67,18 +67,18 @@ struct	Server
 
 	Location*	searchLocationByName(const std::string &name);
 	static void	registerSession(const uint uid);
-	
+
 	std::string					root;
-	
+
 	std::string					server_name;
 	size_t						client_max_body_size;
-	
+
 	std::vector<std::string>	allowed_methods;
 	std::vector<Location>		locations;
-	
+
 	std::map<int, std::string>					error_pages;
 	std::vector<std::pair<std::string, int> >	listen;
-	
+
 	std::vector<std::string>	cookies;
 	uint						lastUID;
 
@@ -108,7 +108,7 @@ class	Webserv
 		std::string			cookies;
 
 		const HttpRequest	parseRequest(const std::string& rawRequest, const Server& server) const;
-		const std::string	handleGetRequest(std::string& path, const Server& server) const;
+		const std::string	handleGetRequest(const std::string& path, const Server& server) const;
 		const std::string	handlePostRequest(const std::string& body, const Server& server) const;
 		const std::string	handleDeleteRequest(const std::string& path, const Server& server) const;
 
