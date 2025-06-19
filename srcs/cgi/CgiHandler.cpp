@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
+/*   By: abidolet <abidolet@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/17 13:55:58 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/19 21:32:59 by abidolet         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,13 +84,13 @@ void	CgiHandler::constructEnv()
 		this->envConstruct[CONTENT_TYPE].append(this->contentType);
 		this->info[AS_BODY] = true;
 	}
-	
+
 	this->envConstruct[REQUEST_METHOD].append(this->method);
-	this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
+	// this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
 	this->envConstruct[SCRIPT_FILENAME].append(this->script);
 	this->envConstruct[SCRIPT_NAME].append(this->script);
 
-	this->path.append(DEFAULT_SERVER_ROOT);
+	// this->path.append(DEFAULT_SERVER_ROOT);
 	this->path.append(this->script);
 
 	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
@@ -125,13 +125,13 @@ void	CgiHandler::childProcess()
 	close(pipes.from_cgi[INPUT]);
 
 	execve(this->cgi.c_str(), args, this->env);
-	
+
 	Log(Log::ERROR) << "Execve failed" << Log::endl();
 }
 
 std::string	CgiHandler::father()
 {
-	int status;
+	int status = 0;
     char buffer[1024];
 	ssize_t bytes_read;
     std::string cgi_output = HTTP_OK;
@@ -139,7 +139,7 @@ std::string	CgiHandler::father()
 	close(pipes.to_cgi[OUTPUT]);
     close(pipes.from_cgi[INPUT]);
 
-    while ((bytes_read = read(pipes.from_cgi[0], buffer, sizeof(buffer) - 1)) > 0) 
+    while ((bytes_read = read(pipes.from_cgi[0], buffer, sizeof(buffer) - 1)) > 0)
 	{
         buffer[bytes_read] = '\0';
         cgi_output += buffer;
@@ -151,9 +151,9 @@ std::string	CgiHandler::father()
 
     waitpid(pid, &status, 0);
 
-	if (WIFEXITED(status)) 
+	if (WIFEXITED(status))
 	{
-        if (WEXITSTATUS(status) != 0) 
+        if (WEXITSTATUS(status) != 0)
             return HTTP_500;
     }
 	else

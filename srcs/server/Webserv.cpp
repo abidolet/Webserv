@@ -194,7 +194,14 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 			return (request);
 		}
 
-		std::string	full_path = best_match->path + '/' + request.path.substr(best_match->root.length());
+		std::string	location_path = best_match->path;
+		if (location_path[location_path.length() - 1] != '/' && request.path[0] != '/')
+		{
+			Log(Log::DEBUG) << "Path does not end with a slash, adding one" << Log::endl();
+			location_path += '/';
+		}
+
+		std::string	full_path = location_path + request.path.substr(best_match->root.length() - 1);
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
@@ -275,7 +282,7 @@ std::string getDirectoryListing(HttpRequest& request)
 {
 	std::stringstream ss;
 	std::vector<struct dirent*> files = getFilesInDir(request.path);
-	
+
 	// printMap<std::string, std::string>(request.headers);
 	ss << 	"<!DOCTYPE html>\r\n";
 	ss << "<html>\r\n";
@@ -316,7 +323,7 @@ const std::string	Webserv::handleGetRequest(	HttpRequest& request, const Server&
 		// dir listing
 		if (request.location.directoryListing)
 			return getDirectoryListing(request);
-		
+
 		Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
 		return (getErrorPage(403, server));
 	}
@@ -524,28 +531,66 @@ void Webserv::run()
 				getsockname(fd, (struct sockaddr*)&addr, &addr_len);
 				uint16_t			port = ntohs(addr.sin_port);
 
-				std::string	response;
+				HttpRequest	httpReq = parseRequest(request, _servers[0]);
+				std::string	host_header;
+
+				std::map<std::string, std::string>::const_iterator host_it = httpReq.headers.find("Host");
+				if (host_it != httpReq.headers.end())
+				{
+					host_header = host_it->second;
+					size_t	colon_pos = host_header.find(':');
+					if (colon_pos != std::string::npos)
+					{
+						host_header = host_header.substr(0, colon_pos);
+					}
+				}
+
+				Log(Log::DEBUG) << "Host header:" << host_header << Log::endl();
 
 				Server*	server = NULL;
-				for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
+				for (std::vector<Server>::iterator s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 				{
-					Server& s = *s_it;
-					for (std::vector<std::pair<std::string, int> >::const_iterator	it = s.listen.begin(); it != s.listen.end(); ++it)
+					Server&	s = *s_it;
+					for (std::vector<std::pair<std::string, int>>::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
 					{
-						if (it->second == port)
+						if (it->second == port && (host_header.empty() || s.server_name == host_header))
 						{
 							server = &s;
 							server->lastUID = addr.sin_addr.s_addr;
 							break ;
 						}
 					}
-				}
-				if (!server)
-				{
-					response = getErrorPage(500, _servers[0]);
+					if (server)
+					{
+						break ;
+					}
 				}
 
-				HttpRequest	httpReq = parseRequest(request, *server);
+				Log(Log::DEBUG) << "Server found:" << (server ? server->server_name : "none") << Log::endl();
+
+				if (!server)
+				{
+					for (std::vector<Server>::iterator s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
+					{
+						Server&	s = *s_it;
+						for (std::vector<std::pair<std::string, int>>::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
+						{
+							if (it->second == port)
+							{
+								server = &s;
+								server->lastUID = addr.sin_addr.s_addr;
+								break ;
+							}
+						}
+						if (server)
+						{
+							break ;
+						}
+					}
+				}
+
+				httpReq = parseRequest(request, *server);
+				std::string	response;
 				CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
 
 				Server::registerSession(addr.sin_addr.s_addr);
