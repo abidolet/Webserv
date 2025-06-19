@@ -219,7 +219,7 @@ namespace Utils
 		// printing listens
 		{
 			Log(Log::DEBUG) << "\t|->" << serv.listen.size() << "listens" << Log::endl();
-			std::vector<std::pair<std::string, int>>::iterator it = serv.listen.begin();
+			std::vector<std::pair<std::string, int> >::iterator it = serv.listen.begin();
 			for ( ; it != serv.listen.end(); ++it)
 			{
 				Log(Log::DEBUG) << "\t|\t|-> {" << it->first << "=>" << it->second  << "}" << Log::endl();

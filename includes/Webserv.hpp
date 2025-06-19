@@ -77,7 +77,7 @@ struct	Server
 	std::vector<Location>		locations;
 	
 	std::map<int, std::string>					error_pages;
-	std::vector<std::pair<std::string, int>>	listen;
+	std::vector<std::pair<std::string, int> >	listen;
 	
 	std::vector<std::string>	cookies;
 	uint						lastUID;

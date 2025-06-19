@@ -335,7 +335,7 @@ void	Server::setupListen(Block &block)
 	if (found.empty())
 		return;
 
-	std::vector<std::pair<std::string, int>> result;
+	std::vector<std::pair<std::string, int> > result;
 	std::vector<std::string>::iterator it = found.begin();
 	for ( ; it != found.end(); ++it)
 	{
