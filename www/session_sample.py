@@ -1,5 +1,6 @@
 import sys
 import requests
+import time
 
 body = {
 	"grant_type" : "client_credentials",
@@ -12,6 +13,7 @@ if (response.status_code != 200):
 
 uid = response.text
 print(f"client uid has been aquired, uid:{uid}")
+time.sleep(0.5)
 body = {
 	"grant_type" : "client_visits",
 	"UID": str(uid),

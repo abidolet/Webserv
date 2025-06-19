@@ -247,15 +247,14 @@ void Server::setupMaxBodySize(Block& block)
 	float tmp = std::strtod(max_size.c_str(), &end);
 	if (tmp < 0)
 		throw std::runtime_error("invalid client_max_body_size: `" + max_size + "'");
+	client_max_body_size = tmp;
 	if (end[0] != '\0')
 	{
 		if ((end[0] == 'm' || end[0] == 'M') && end[1] == '\0')
-			client_max_body_size *= tmp * 1000000;
+			client_max_body_size *= 1000000;
 		else
 			throw std::runtime_error("invalid client_max_body_size: `" + max_size + "'");
 	}
-	else
-		client_max_body_size = tmp;
 }
 
 void Server::setupRedirections(Block& block)

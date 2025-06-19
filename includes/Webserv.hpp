@@ -13,14 +13,6 @@
 # define RUN_SERV_SELF_CHECK 1
 #endif
 
-struct	HttpRequest
-{
-	std::string							method;
-	std::string							body;
-	std::string							path;
-	std::map<std::string, std::string>	headers;
-};
-
 struct 	Location
 {
 	Location()
@@ -34,7 +26,7 @@ struct 	Location
 	std::string		cgi_extension;
 	bool			is_cgi;
 
-	int				directoryListing;
+	bool			directoryListing;
 
 	std::pair<int, std::string> redirection;
 
@@ -97,29 +89,37 @@ private:
 
 };
 
+struct	HttpRequest
+{
+	std::string							method;
+	std::string							body;
+	std::string							path;
+	std::map<std::string, std::string>	headers;
+	bool								method_allowed;
+};
+
 class	Webserv
 {
 	private:
 		std::vector<Server>	_servers;
-
-		int								_epoll_fd;
-		std::vector<int>				_listener_fds;
-		std::map<int, int>				_client_to_server;
-
+		int					_epoll_fd;
+		std::vector<int>	_listener_fds;
+		std::map<int, int>	_client_to_server;
 		std::string			cookies;
+
+		const HttpRequest	parseRequest(const std::string& rawRequest, const Server& server) const;
+		const std::string	handleGetRequest(std::string& path, const Server& server) const;
+		const std::string	handlePostRequest(const std::string& body, const Server& server) const;
+		const std::string	handleDeleteRequest(const std::string& path, const Server& server) const;
+
+		const std::string	getErrorPage(const int error_code, const Server& server) const;
+		const std::string	getStatusMessage(const int code) const;
 
 	public:
 		Webserv(const std::string& file);
 		~Webserv();
 
 		void	run();
-
-		std::string	handleGetRequest(const Server&	server, std::string& path) const;
-		std::string	handlePostRequest(const Server& serv, const std::string& body) const;
-		std::string	handleDeleteRequest(const std::string& request) const;
-
-		std::string	getErrorPage(int error_code) const;
-		std::string	getStatusMessage(int code) const;
 };
 
 #endif
