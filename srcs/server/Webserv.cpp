@@ -551,7 +551,7 @@ void Webserv::run()
 				for (std::vector<Server>::iterator s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 				{
 					Server&	s = *s_it;
-					for (std::vector<std::pair<std::string, int>>::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
+					for (std::vector<std::pair<std::string, int> >::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
 					{
 						if (it->second == port && (host_header.empty() || s.server_name == host_header))
 						{
@@ -573,7 +573,7 @@ void Webserv::run()
 					for (std::vector<Server>::iterator s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 					{
 						Server&	s = *s_it;
-						for (std::vector<std::pair<std::string, int>>::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
+						for (std::vector<std::pair<std::string, int> >::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
 						{
 							if (it->second == port)
 							{
