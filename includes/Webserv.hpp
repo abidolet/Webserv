@@ -10,7 +10,7 @@
 #include "CgiHandler.hpp"
 
 #ifndef RUN_SERV_SELF_CHECK
-# define RUN_SERV_SELF_CHECK 1
+# define RUN_SERV_SELF_CHECK 0
 #endif
 
 struct 	Location
@@ -55,7 +55,7 @@ struct	Server
 	Server()
 		: root("/"), server_name("localhost"), client_max_body_size(0)
 	{
-		listen.insert(std::pair<std::string, int>("0.0.0.0", 8080));
+		listen.push_back(std::pair<std::string, int>("0.0.0.0", 8080));
 	}
 
 	std::string handlePostRequest(std::string body) const;
@@ -76,8 +76,8 @@ struct	Server
 	std::vector<std::string>	allowed_methods;
 	std::vector<Location>		locations;
 	
-	std::map<int, std::string>	error_pages;
-	std::map<std::string, int>	listen;
+	std::map<int, std::string>					error_pages;
+	std::vector<std::pair<std::string, int>>	listen;
 	
 	std::vector<std::string>	cookies;
 	uint						lastUID;

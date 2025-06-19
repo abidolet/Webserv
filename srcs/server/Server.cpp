@@ -331,12 +331,11 @@ void assertListen(const std::string& listen)
 
 void	Server::setupListen(Block &block)
 {
-	std::map<std::string, int>	result;
-
 	std::vector<std::string> found = block.loadDirectives("listen");
 	if (found.empty())
 		return;
 
+	std::vector<std::pair<std::string, int>> result;
 	std::vector<std::string>::iterator it = found.begin();
 	for ( ; it != found.end(); ++it)
 	{
@@ -350,7 +349,7 @@ void	Server::setupListen(Block &block)
 			port = std::strtol(split[0].c_str(), &endl, 10);
 			if (endl[0] != '\0')
 				throw Parser::InvalidDirectiveException("listen", *it);
-			result.insert(std::pair<std::string, int>("0.0.0.0", port));
+			result.push_back(std::pair<std::string, int>("0.0.0.0", port));
 		}
 		else
 		{
@@ -361,9 +360,8 @@ void	Server::setupListen(Block &block)
 			if (endl[0] != '\0')
 				throw Parser::InvalidDirectiveException("listen", *it);
 
-			result.insert(std::pair<std::string, int>(split[0], port));
+			result.push_back(std::pair<std::string, int>(split[0], port));
 		}
-
 	}
 	listen = result;
 }

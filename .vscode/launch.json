@@ -9,7 +9,7 @@
 			"request": "launch",
 			"name": "Launch",
 			"program": "${workspaceFolder}/webserv",
-			"args": ["${workspaceFolder}/conf/parsing.conf"],
+			"args": ["${workspaceFolder}/conf/default.conf"],
 			"cwd": "${workspaceFolder}",
 			"preLaunchTask": "build"
 		}
