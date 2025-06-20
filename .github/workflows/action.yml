@@ -15,3 +15,4 @@ jobs:
       - run: sudo apt install siege -y
       - run: make MODE=debug -C ../
       - run: bash tester.sh
+      - run: pwd
