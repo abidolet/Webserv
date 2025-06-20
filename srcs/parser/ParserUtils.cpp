@@ -253,6 +253,8 @@ namespace Utils
 				Log(Log::DEBUG) << "\t|\t|-> root:" << it->root << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> index:" << it->index << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> allowed methods:" << Utils::strUnite(it->allowed_methods, ",") << Log::endl();
+				if (!it->upload_dir.empty())
+					Log(Log::DEBUG) << "\t|\t|-> upload dir:" << it->upload_dir << Log::endl();
 				Log(Log::DEBUG) << "\t|\t|-> dir listing:" << (it->directoryListing ? "on" : "off")  << Log::endl();
 				if (it->redirection.first != -1)
 					Log(Log::DEBUG) << "\t|\t|-> redirection:" << it->redirection.first << "=>" << it->redirection.second << Log::endl();

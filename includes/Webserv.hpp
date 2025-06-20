@@ -27,6 +27,7 @@ struct 	Location
 	bool			is_cgi;
 
 	bool			directoryListing;
+	std::string		upload_dir;
 
 	std::pair<int, std::string> redirection;
 
@@ -79,6 +80,8 @@ struct	Server
 	std::map<int, std::string>					error_pages;
 	std::vector<std::pair<std::string, int> >	listen;
 
+	bool										is_default;
+
 	std::vector<std::string>	cookies;
 	uint						lastUID;
 
@@ -87,6 +90,13 @@ private:
 	void	setupRedirections(Block& block);
 	void	setupListen(Block &block);
 
+};
+
+struct File
+{
+	std::string name;
+	std::string last_modif_date;
+	long int	size;
 };
 
 struct	HttpRequest

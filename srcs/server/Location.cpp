@@ -24,6 +24,7 @@ Location::Location(Block &block)
 	block.loadSingleDirective("path", path);
 	block.loadSingleDirective("index", index);
 	block.loadSingleDirective("cgi_pass", cgi_pass);
+	block.loadSingleDirective("upload_dir", upload_dir);
 
 	// TODO faire une rediretion assertion
 	{

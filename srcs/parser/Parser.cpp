@@ -121,7 +121,7 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 {
 	std::vector<Location> locations;
 
-	const std::string locationOptions[] = {"index", "path", "allowed_methods", "cgi_pass", "return", "directory_listing"};
+	const std::string locationOptions[] = {"index", "path", "allowed_methods", "cgi_pass", "return", "directory_listing", "upload_dir"};
 	const std::string cookiesOptions[] = {"set"};
 	const std::string names[] = { "location", "cookies" };
 
@@ -133,7 +133,7 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 
 		if (it->getName() == "location")
 		{
-			it->dirAssert(std::vector<std::string>(locationOptions, locationOptions + 6));
+			it->dirAssert(std::vector<std::string>(locationOptions, locationOptions + 7));
 			Location tmp(*it);
 			tmp.allowed_methods = setupAllowedMethods(*it);
 			locations.push_back(tmp);
