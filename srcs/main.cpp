@@ -32,7 +32,7 @@ int main (int argc, char *argv[])
 
 	std::string	file;
 
-#if 0
+#if ENABLE_LOG_FILE
 	Log::setupLogFile();
 #endif
 

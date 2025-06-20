@@ -11,6 +11,10 @@ ifeq ($(MODE), debug)
 	CXX = g++
 	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -g3
 endif
+ifeq ($(MODE), action)
+	CXX = g++
+	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -D DISABLE_LOGGER=1 -g3
+endif
 
 VPATH = srcs:srcs/parser:srcs/server:srcs/cgi
 

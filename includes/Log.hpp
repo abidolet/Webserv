@@ -59,8 +59,13 @@
 #define F_ALERT		0b100000
 
 
-#define GET_VAR_NAME(name) #name
+#ifndef ENABLE_LOG_FILE
+#define ENABLE_LOG_FILE 0
+#endif
 
+#ifndef DISABLE_LOGGER
+#define DISABLE_LOGGER 1
+#endif
 
 class Log
 {
@@ -101,6 +106,9 @@ public:
 	template <typename T>
 	Log& operator<<(const T& value)
 	{
+	#if DISABLE_LOGGER
+	return *this;
+	#endif
 		m_oss << value << " ";
 		return *this;
 	}

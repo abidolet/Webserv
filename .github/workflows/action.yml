@@ -13,6 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt install siege -y
-      - run: make MODE=debug -C ../
+      - run: make MODE=action -C ../
       - run: bash tester.sh
       - run: pwd

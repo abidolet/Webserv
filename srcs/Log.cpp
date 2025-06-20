@@ -64,6 +64,9 @@ void Log::setupLogFile()
 
 Log::Log(Log::Type type)
 {
+#if DISABLE_LOGGER
+	return;
+#endif
 	m_type = type;
 	displayTimestamp();
 	switch (type)
@@ -92,7 +95,9 @@ Log::Log(Log::Type type)
 template <>
 Log& Log::operator<<<Log::endl>(const Log::endl& value)
 {
-
+#if DISABLE_LOGGER
+	return *this;
+#endif
 	switch (m_type)
 	{
 		case LOG:
