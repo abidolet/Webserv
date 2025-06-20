@@ -194,31 +194,26 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 			return (request);
 		}
 
-		std::string	location_path = best_match->path;
-		if (location_path[location_path.length() - 1] != '/' && request.path[0] != '/')
-		{
-			Log(Log::DEBUG) << "Path does not end with a slash, adding one" << Log::endl();
-			location_path += '/';
-		}
 
-		
-		std::string	full_path;
-			full_path = location_path + request.path.substr(best_match->root.length() - 1);
-		
+		std::string	full_path = best_match->path;
+		if (!request.path.substr(best_match->root.length()).empty())
+		{
+			full_path += request.path.substr(best_match->root.length());
+		}
+		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
+		if (full_path[full_path.length() - 1] == '/')
+		{
+			full_path = full_path.substr(0, full_path.length() - 1);
+			Log(Log::DEBUG) << "Removed trailing slash from path:" << full_path << Log::endl();
+		}
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
-
 		struct stat	statbuf;
-		if (stat(full_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
+		if (stat(full_path.c_str(), &statbuf) != 0 || S_ISDIR(statbuf.st_mode))
 		{
 			Log(Log::DEBUG) << "Path is a directory" << Log::endl();
-			if (full_path[full_path.length() - 1] != '/')
-			{
-				full_path += '/';
-				Log(Log::DEBUG) << "Added trailing slash:" << full_path << Log::endl();
-			}
-			full_path += best_match->index;
+			full_path += '/' + best_match->index;
 			Log(Log::DEBUG) << "Added index file:" << full_path << Log::endl();
 		}
 
@@ -642,5 +637,6 @@ void Webserv::run()
 std::ostream& operator<<(std::ostream& stream, const HttpRequest& request)
 {
 	// stream << "" << request.
+	(void)request;
 	return stream;
 }
