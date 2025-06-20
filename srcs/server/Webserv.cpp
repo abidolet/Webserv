@@ -232,9 +232,20 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	return (request);
 }
 
-std::vector<std::string> getFilesInDir(const std::string path)
+File getFile(std::string filename, struct dirent* infos)
 {
-	std::vector<std::string> files;
+	struct stat st;
+	stat(filename.c_str(), &st);
+	
+	return (File) {
+		.name=infos->d_name,
+		.size=(st.st_size)
+	};
+}
+
+std::vector<File> getFilesInDir(const std::string path)
+{
+	std::vector<File> files;
 
 	DIR* dir = opendir(path.c_str());
 	if (dir == NULL)
@@ -245,21 +256,19 @@ std::vector<std::string> getFilesInDir(const std::string path)
 	struct dirent* info;
 	while ((info = readdir(dir)) != NULL)
 	{
-		files.push_back(info->d_name); // TODO: maybe add other info
+		files.push_back(getFile(path + info->d_name, info)); // TODO: maybe add other info
 	}
 	closedir(dir);
 	return files;
 }
 
-std::string getElt(const std::string& file, const std::string& path)
+std::string getElt(const File& file, const std::string& path)
 {
-	Log(Log::WARNING) << path + file << Log::endl();
+	Log(Log::WARNING) << path + file.name << Log::endl();
 	std::stringstream ss;
-	ss << "<li><a style='color: white;' href='";
-	ss << path + file;
-	ss << "'>";
-	ss << file;
-	ss << "</a></li>\r\n";
+
+	ss << "<div class='elt'><a href='" << (path + file.name) << "'>" \
+	 << file.name << "</a> <p>" << file.size << "bytes</p></div>";
 	return ss.str();
 }
 
@@ -278,24 +287,25 @@ std::string getDirectoryListing(HttpRequest& request)
 {
 
 	std::stringstream ss;
-	std::vector<std::string> files = getFilesInDir(request.path);
+	std::vector<File> files = getFilesInDir(request.path);
 
-	// printMap<std::string, std::string>(request.headers);
-	ss << 	"<!DOCTYPE html>\r\n";
-	ss << "<html>\r\n";
-	ss << 	"<head>\r\n";
-	ss << 		"<title>directory</title>\r\n";
-	ss <<	"</head>\r\n";
-	ss << 	"<body style='color:white; background-color:black;'>\r\n";
-	ss << 		"<h1><bold>" + request.path + "<bold></h1>\r\n";
-	ss << 			"<ul>\r\n";
+
+	ss << "<html>";
+	ss << "<head>";
+	ss << "	<style>";
+	ss << "	.elt {display:flex; flex-direction:row; gap: 65px; align-items: center; justify-content: space-between; width: 25vw;}";
+	ss << "	body {display:flex; flex-direction:column;}";
+	ss << "	</style>";
+	ss << "</head>";
+	ss << "<body>";
+	ss << "	<h1>" << request.path << "</h1>";
+	ss << "	<div class='elt'><p>name </p> <p> | </p> <p>size</p></div>";
 	for (size_t i = 0; i < files.size(); i++)
 	{
 		ss << getElt(files[i], getURL(request, request.path));
 	}
-	ss << 			"</ul>\r\n";
-	ss << 	"</body>\r\n";
-	ss << "</html>\r\n";
+	ss << "</body>";
+	ss << "</html>";
 
 	std::string	content = ss.str();
 	std::ostringstream oss;
