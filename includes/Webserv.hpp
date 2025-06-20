@@ -120,7 +120,7 @@ class	Webserv
 
 		const HttpRequest	parseRequest(const std::string& rawRequest, const Server& server) const;
 		const std::string	handleGetRequest(HttpRequest& request, const Server& server) const;
-		const std::string	handlePostRequest(const std::string& body, const Server& server) const;
+		const std::string	handlePostRequest(const HttpRequest& request, const Server& server) const;
 		const std::string	handleDeleteRequest(const std::string& path, const Server& server) const;
 
 		const std::string	getErrorPage(const int error_code, const Server& server) const;

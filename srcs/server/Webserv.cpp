@@ -194,12 +194,8 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 			return (request);
 		}
 
-
 		std::string	full_path = best_match->path;
-		if (!request.path.substr(best_match->root.length()).empty())
-		{
-			full_path += request.path.substr(best_match->root.length());
-		}
+		full_path += request.path.substr(best_match->root.length());
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
 		if (full_path[full_path.length() - 1] == '/')
 		{
@@ -213,7 +209,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 		if (stat(full_path.c_str(), &statbuf) != 0 || S_ISDIR(statbuf.st_mode))
 		{
 			Log(Log::DEBUG) << "Path is a directory" << Log::endl();
-			full_path += '/' + best_match->index;
+			full_path += best_match->index;
 			Log(Log::DEBUG) << "Added index file:" << full_path << Log::endl();
 		}
 
@@ -318,8 +314,6 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 
 	if (path.find(".") == (size_t)-1)
 	{
-		Log::disableFlags(F_DEBUG);
-		// dir listing
 		if (Utils::dirAccess(request.path))
 		{
 			Log(Log::SUCCESS) << "trying to get to dir listing" << Log::endl();
@@ -358,29 +352,57 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 	return (response);
 }
 
-const std::string	Webserv::handlePostRequest(const std::string& body, const Server& server) const
+const std::string	Webserv::handlePostRequest(const HttpRequest& request, const Server& server) const
 {
-	if (body.size() > server.client_max_body_size && server.client_max_body_size > 0)
+	if (request.body.size() > server.client_max_body_size && server.client_max_body_size > 0)
 	{
 		Log(Log::WARNING) << "Body size exceeds client_max_body_size" << Log::endl();
 		return (getErrorPage(413, server));
 	}
+	else if (request.location.upload_dir.empty())
+	{
+		Log(Log::WARNING) << "Upload directory is not set for POST request" << Log::endl();
 
-	std::ostringstream	oss;
-	std::string r = server.handlePostRequest(body);
-	oss << r.size();
-	std::string	content_length = oss.str();
+		std::ostringstream oss;
+		std::string r = server.handlePostRequest(request.body);
+		oss << r.size();
+		std::string content_length = oss.str();
 
-	Log() << "Post request with body: " << body << Log::endl();
+		Log() << "Post request with body: " << request.body << Log::endl();
 
-	std::string	response = "HTTP/1.1 200 OK\r\n";
-	response += "Content-Type: text/plain\r\n";
-	response += "Content-Length: " + content_length + "Connection: close\r\n\r\n";
-	response += r;
+		std::string response = "HTTP/1.1 200 OK\r\n";
+		response += "Content-Type: text/plain\r\n";
+		response += "Content-Length: " + content_length + "Connection: close\r\n\r\n";
+		response += r;
 
-	Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
+		Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
+		return (response);
+	}
+	else
+	{
+		std::string filename = "upload_" + toString(time(NULL));
+		std::map<std::string, std::string>::const_iterator it = request.headers.find("Content-Disposition");
+		if (it != request.headers.end())
+		{
+			size_t pos = it->second.find("filename=\"");
+			if (pos != std::string::npos)
+			{
+				filename = it->second.substr(pos + 10);
+				filename = filename.substr(0, filename.find("\""));
+			}
+		}
 
-	return (response);
+		std::string filepath = request.location.upload_dir + "/" + filename;
+		std::ofstream outfile(filepath.c_str(), std::ios::binary);
+		if (!outfile)
+		{
+			return (getErrorPage(500, server));
+		}
+		outfile.write(request.body.c_str(), request.body.size());
+		outfile.close();
+
+		return ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nFile uploaded to: " + filepath);
+	}
 }
 
 const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const
@@ -615,7 +637,7 @@ void Webserv::run()
 				}
 				else if (httpReq.method == "POST")
 				{
-					response = handlePostRequest(httpReq.body, *server);
+					response = handlePostRequest(httpReq, *server);
 				}
 				else if (httpReq.method == "DELETE")
 				{
