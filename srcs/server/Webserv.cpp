@@ -420,7 +420,7 @@ void Webserv::run()
 {
 	Log() << "Running web server..." << Log::endl();
 
-	_epoll_fd = epoll_create(10);
+	_epoll_fd = epoll_create(4087);
 	if (_epoll_fd == -1)
 	{
 		throw std::runtime_error("Failed to create epoll instance: " + static_cast<std::string>(strerror(errno)));
@@ -468,7 +468,7 @@ void Webserv::run()
 			}
 
 			struct epoll_event	ev;
-			ev.events = EPOLLIN | EPOLLET;
+			ev.events = EPOLLIN;
 			ev.data.fd = listener_fd;
 			if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, listener_fd, &ev) == -1)
 			{
@@ -510,7 +510,7 @@ void Webserv::run()
 				}
 
 				struct epoll_event	client_ev;
-				client_ev.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+				client_ev.events = EPOLLIN | EPOLLRDHUP;
 				client_ev.data.fd = client;
 				if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client, &client_ev) == -1)
 				{
@@ -519,7 +519,7 @@ void Webserv::run()
 				}
 				continue ;
 			}
-			else if (events[n].events & (EPOLLRDHUP | EPOLLHUP))
+			else if (events[n].events & EPOLLRDHUP)
 			{
 				epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
 				CLOSE(fd);
