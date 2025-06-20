@@ -47,3 +47,4 @@ std::ostream& operator<<(std::ostream& stream, const Session& session)
 	stream << ",uid" << session.uid << ",visitCount:" << session.visitCount;
 	return stream;
 }
+

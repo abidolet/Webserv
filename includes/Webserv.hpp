@@ -98,6 +98,7 @@ struct	HttpRequest
 	Location							location;
 	bool								method_allowed;
 };
+std::ostream& operator<<(std::ostream& stream, const HttpRequest& request);
 
 class	Webserv
 {
@@ -106,7 +107,6 @@ class	Webserv
 		int					_epoll_fd;
 		std::vector<int>	_listener_fds;
 		std::map<int, int>	_client_to_server;
-		std::string			cookies;
 
 		const HttpRequest	parseRequest(const std::string& rawRequest, const Server& server) const;
 		const std::string	handleGetRequest(HttpRequest& request, const Server& server) const;

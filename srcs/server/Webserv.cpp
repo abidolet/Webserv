@@ -201,7 +201,10 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 			location_path += '/';
 		}
 
-		std::string	full_path = location_path + request.path.substr(best_match->root.length() - 1);
+		
+		std::string	full_path;
+			full_path = location_path + request.path.substr(best_match->root.length() - 1);
+		
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
@@ -231,13 +234,12 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 			request.method_allowed = true;
 		}
 	}
-
 	return (request);
 }
 
-std::vector<struct dirent*> getFilesInDir(const std::string path)
+std::vector<std::string> getFilesInDir(const std::string path)
 {
-	std::vector<struct dirent*> files;
+	std::vector<std::string> files;
 
 	DIR* dir = opendir(path.c_str());
 	if (dir == NULL)
@@ -248,21 +250,20 @@ std::vector<struct dirent*> getFilesInDir(const std::string path)
 	struct dirent* info;
 	while ((info = readdir(dir)) != NULL)
 	{
-		files.push_back(info); // TODO: maybe add other info
-		std::string file = path.c_str() + *(info->d_name);
+		files.push_back(info->d_name); // TODO: maybe add other info
 	}
 	closedir(dir);
 	return files;
 }
 
-std::string getElt(struct dirent* file, const std::string& path)
+std::string getElt(const std::string& file, const std::string& path)
 {
-	Log(Log::WARNING) << path + file->d_name << Log::endl();
+	Log(Log::WARNING) << path + file << Log::endl();
 	std::stringstream ss;
 	ss << "<li><a style='color: white;' href='";
-	ss << path + file->d_name;
+	ss << path + file;
 	ss << "'>";
-	ss << file->d_name;
+	ss << file;
 	ss << "</a></li>\r\n";
 	return ss.str();
 }
@@ -280,8 +281,9 @@ std::string getURL(HttpRequest& request, std::string path)
 
 std::string getDirectoryListing(HttpRequest& request)
 {
+
 	std::stringstream ss;
-	std::vector<struct dirent*> files = getFilesInDir(request.path);
+	std::vector<std::string> files = getFilesInDir(request.path);
 
 	// printMap<std::string, std::string>(request.headers);
 	ss << 	"<!DOCTYPE html>\r\n";
@@ -314,19 +316,26 @@ std::string getDirectoryListing(HttpRequest& request)
 	return response;
 }
 
-const std::string	Webserv::handleGetRequest(	HttpRequest& request, const Server& server) const
+const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& server) const
 {
 	struct stat	statbuf;
 	std::string path = request.path;
+
 	if (path.find(".") == (size_t)-1)
 	{
+		Log::disableFlags(F_DEBUG);
 		// dir listing
-		if (request.location.directoryListing)
-			return getDirectoryListing(request);
-
-		Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
+		if (Utils::dirAccess(request.path))
+		{
+			Log(Log::SUCCESS) << "trying to get to dir listing" << Log::endl();
+			if (request.location.directoryListing)
+				return getDirectoryListing(request);
+			Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
+		}
+		Log(Log::WARNING) << "directory not found:'" << path << "'" << Log::endl();
 		return (getErrorPage(403, server));
 	}
+
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
 		Log(Log::WARNING) << "File not found:'" << path << "'" << Log::endl();
@@ -628,4 +637,10 @@ void Webserv::run()
 			}
 		}
 	}
+}
+
+std::ostream& operator<<(std::ostream& stream, const HttpRequest& request)
+{
+	// stream << "" << request.
+	return stream;
 }
