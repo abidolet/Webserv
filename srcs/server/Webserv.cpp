@@ -197,9 +197,9 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 		std::string	full_path = best_match->path;
 		full_path += request.path.substr(best_match->root.length());
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
-		if (full_path[full_path.length() - 1] == '/')
+		while (full_path[full_path.length() - 1] == '/')
 		{
-			full_path = full_path.substr(0, full_path.length() - 1);
+			full_path.erase(full_path.length() - 1);
 			Log(Log::DEBUG) << "Removed trailing slash from path:" << full_path << Log::endl();
 		}
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
@@ -232,7 +232,7 @@ File getFile(std::string filename, struct dirent* infos)
 {
 	struct stat st;
 	stat(filename.c_str(), &st);
-	
+
 	return (File) {
 		.name=infos->d_name,
 		.size=(st.st_size)
