@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: apt update && sudo apt upgrade
-      - run: apt install siege
+      - run: apt update -y && sudo apt upgrade -y
+      - run: apt install siege -y
       - run: make debug
       - run: siege -c 255 -r 1000 -b -t 1m
