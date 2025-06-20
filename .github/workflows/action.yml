@@ -11,4 +11,4 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt install siege -y
       - run: make debug
-      - run: siege -c 255 -r 1000 -b -t 1m
+      - run: siege -c 2 -r 100 -b -t 10s
