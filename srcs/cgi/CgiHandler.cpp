@@ -6,7 +6,7 @@
 /*   By: abidolet <abidolet@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/20 10:11:41 by abidolet         ###   ########.fr       */
+/*   Updated: 2025/06/22 23:36:52 by abidolet         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -104,10 +104,10 @@ void	CgiHandler::closePipes()
 {
 	if (this->info[PIPES_OPENED])
 	{
-		close(this->pipes.from_cgi[OUTPUT]);
-		close(this->pipes.from_cgi[INPUT]);
-		close(this->pipes.to_cgi[OUTPUT]);
-		close(this->pipes.to_cgi[INPUT]);
+		CLOSE(this->pipes.from_cgi[OUTPUT]);
+		CLOSE(this->pipes.from_cgi[INPUT]);
+		CLOSE(this->pipes.to_cgi[OUTPUT]);
+		CLOSE(this->pipes.to_cgi[INPUT]);
 		this->info[PIPES_OPENED] = false;
 	}
 }
@@ -116,13 +116,13 @@ void	CgiHandler::childProcess()
 {
 	char* args[] = {const_cast<char*>(this->path.c_str()), const_cast<char*>(this->path.c_str()), NULL};
 
-	close(pipes.to_cgi[INPUT]);
-	close(pipes.from_cgi[OUTPUT]);
+	CLOSE(pipes.to_cgi[INPUT]);
+	CLOSE(pipes.from_cgi[OUTPUT]);
 
 	dup2(pipes.to_cgi[OUTPUT], STDIN_FILENO);
 	dup2(pipes.from_cgi[INPUT], STDOUT_FILENO);
-	close(pipes.to_cgi[OUTPUT]);
-	close(pipes.from_cgi[INPUT]);
+	CLOSE(pipes.to_cgi[OUTPUT]);
+	CLOSE(pipes.from_cgi[INPUT]);
 
 	execve(this->cgi.c_str(), args, this->env);
 
@@ -136,16 +136,16 @@ std::string	CgiHandler::father()
 	ssize_t bytes_read;
     std::string cgi_output = HTTP_OK;
 
-	close(pipes.to_cgi[OUTPUT]);
-    close(pipes.from_cgi[INPUT]);
+	CLOSE(pipes.to_cgi[OUTPUT]);
+    CLOSE(pipes.from_cgi[INPUT]);
 
     while ((bytes_read = read(pipes.from_cgi[0], buffer, sizeof(buffer) - 1)) > 0)
 	{
         buffer[bytes_read] = '\0';
         cgi_output += buffer;
     }
-    close(pipes.from_cgi[OUTPUT]);
-    close(pipes.to_cgi[INPUT]);
+    CLOSE(pipes.from_cgi[OUTPUT]);
+    CLOSE(pipes.to_cgi[INPUT]);
 
 	this->info[EXECUTED] = true;
 

@@ -64,7 +64,7 @@
 #endif
 
 #ifndef DISABLE_LOGGER
-#define DISABLE_LOGGER 1
+#define DISABLE_LOGGER 0
 #endif
 
 class Log

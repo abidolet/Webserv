@@ -18,7 +18,7 @@ void assertLocation(const Location& location, const Block& block)
 
 Location::Location(Block &block)
 	:	path("/"), root("/"), index(""),
-		is_cgi(false), directoryListing(true), redirection(-1, "")
+		is_cgi(false), directoryListing(false), redirection(-1, "")
 {
 	setupLocationRoot(block);
 	block.loadSingleDirective("path", path);

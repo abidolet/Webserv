@@ -13,6 +13,8 @@
 # define RUN_SERV_SELF_CHECK 1
 #endif
 
+# define CLOSE(fd) if (fd > 1) {close(fd); fd = -1;}
+
 struct 	Location
 {
 	Location()
@@ -124,7 +126,6 @@ class	Webserv
 		const std::string	handleDeleteRequest(const std::string& path, const Server& server) const;
 
 		const std::string	getErrorPage(const int error_code, const Server& server) const;
-		const std::string	getStatusMessage(const int code) const;
 
 	public:
 		Webserv(const std::string& file);

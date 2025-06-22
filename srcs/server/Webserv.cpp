@@ -7,11 +7,9 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <dirent.h>
-
 #include "ParserUtils.hpp"
 
 #define MAX_EVENTS 1024
-#define CLOSE(fd) if (fd > 1) {close(fd); fd = -1;}
 
 Webserv::Webserv(const std::string& file)
 	: _servers(), _epoll_fd(-1), _listener_fds()
@@ -29,11 +27,31 @@ Webserv::~Webserv()
 	}
 }
 
-std::string	toString(int value)
+static const std::string	toString(const int value)
 {
 	std::ostringstream	oss;
 	oss << value;
 	return (oss.str());
+}
+
+static const std::string	getStatusMessage(const int code)
+{
+	switch(code)
+	{
+		case 200:	return ("OK");
+		case 403:	return ("Forbidden");
+		case 404:	return ("Not Found");
+		case 405:	return ("Method Not Allowed");
+		case 413:	return ("Payload Too Large");
+		case 500:	return ("Internal Server Error");
+		default:	return ("Unknown code");
+	}
+}
+
+static const std::string	generatePage(const int error_code, const std::string &content)
+{
+	return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" + "Content-Type: text/html\r\n"
+		+ "Connection: close\r\n" + "Content-Length: " + toString(content.size()) + "\r\n\r\n" + content);
 }
 
 const std::string	Webserv::getErrorPage(const int error_code, const Server& server) const
@@ -49,60 +67,14 @@ const std::string	Webserv::getErrorPage(const int error_code, const Server& serv
 			if (file)
 			{
 				Log(Log::DEBUG) << "Custom error page found:" << it->second << Log::endl();
-
-				std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-				std::ostringstream	oss;
-				oss << content.size();
-
-				return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
-					"Content-Type: text/html\r\n" +
-					"Content-Length: " + oss.str() + "\r\n" +
-					"Connection: close\r\n\r\n" +
-					content);
+				std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+				return (generatePage(error_code, content));
 			}
 		}
 	}
 
 	Log(Log::DEBUG) << "Custom error page not found, returning default" << Log::endl();
-
-	std::ostringstream	oss;
-	oss << error_code;
-	std::string	default_content = "<html><body><h1>" + oss.str() + " " +
-								getStatusMessage(error_code) + "</h1></body></html>";
-
-	oss.str("");
-	oss << default_content.size();
-
-	return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" +
-		"Content-Type: text/html\r\n" +
-		"Content-Length: " + oss.str() + "\r\nConnection: close\r\n\r\n" +
-		default_content);
-}
-
-const std::string	Webserv::getStatusMessage(const int code) const
-{
-	switch(code)
-	{
-		case 403:	return ("Forbidden");
-		case 404:	return ("Not Found");
-		case 405:	return ("Method Not Allowed");
-		case 413:	return ("Payload Too Large");
-		case 500:	return ("Internal Server Error");
-		default:	return ("Unknown code");
-	}
-}
-
-std::string	longestCommonPrefix(const std::string& s1, const std::string& s2)
-{
-	size_t	i = 0;
-	size_t	size = std::min(s1.length(), s2.length());
-
-	while (i < size && s1[i] == s2[i])
-	{
-		i++;
-	}
-
-	return (s1.substr(0, i));
+	return (generatePage(error_code, ""));
 }
 
 const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Server& server) const
@@ -195,20 +167,46 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 		}
 
 		std::string	full_path = best_match->path;
-		full_path += request.path.substr(best_match->root.length());
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
+		while (full_path[0] == '/')
+		{
+			full_path.erase(0, 1);
+			Log(Log::DEBUG) << "Removed leading slash from path:" << full_path << Log::endl();
+		}
 		while (full_path[full_path.length() - 1] == '/')
 		{
 			full_path.erase(full_path.length() - 1);
 			Log(Log::DEBUG) << "Removed trailing slash from path:" << full_path << Log::endl();
 		}
+		while (!request.path.empty() && request.path[0] == '/')
+		{
+			request.path.erase(0, 1);
+			Log(Log::DEBUG) << "Removed leading slash from path:" << request.path << Log::endl();
+		}
+		while (!request.path.empty() && request.path[request.path.length() - 1] == '/')
+		{
+			Log(Log::DEBUG) << "Removed trailing slash from path:" << request.path << Log::endl();
+			request.path.erase(request.path.length() - 1);
+		}
+		full_path = '/' + full_path + '/' + request.path;
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
 		struct stat	statbuf;
-		if (stat(full_path.c_str(), &statbuf) != 0 || S_ISDIR(statbuf.st_mode))
+		if (stat(full_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode) && !best_match->directoryListing)
 		{
-			Log(Log::DEBUG) << "Path is a directory" << Log::endl();
+			std::string	index = best_match->index;
+			Log(Log::DEBUG) << "Path is a directory adding index:" << index << Log::endl();
+			while (index[0] == '/')
+			{
+				index = index.substr(1);
+				Log(Log::DEBUG) << "Removed leading slash from index:" << index << Log::endl();
+			}
+			if (full_path[full_path.length() - 1] != '/')
+			{
+				full_path += '/';
+				Log(Log::DEBUG) << "Added trailing slash to full path:" << full_path << Log::endl();
+			}
 			full_path += best_match->index;
 			Log(Log::DEBUG) << "Added index file:" << full_path << Log::endl();
 		}
@@ -219,7 +217,9 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	}
 	else
 	{
-		Log(Log::WARNING) << "No matching location found for path:" << request.path << Log::endl();
+		Log(Log::WARNING) << "No matching location found for path:" << request.path << "adding root:" << server.root << Log::endl();
+		request.path = server.root + request.path;
+
 		if (std::find(server.allowed_methods.begin(), server.allowed_methods.end(), request.method) != server.allowed_methods.end())
 		{
 			request.method_allowed = true;
@@ -235,7 +235,8 @@ File getFile(std::string filename, struct dirent* infos)
 
 	return (File) {
 		.name=infos->d_name,
-		.size=(st.st_size)
+		.last_modif_date=0,
+		.size=(st.st_size),
 	};
 }
 
@@ -281,10 +282,8 @@ std::string getURL(HttpRequest& request, std::string path)
 
 std::string getDirectoryListing(HttpRequest& request)
 {
-
 	std::stringstream ss;
 	std::vector<File> files = getFilesInDir(request.path);
-
 
 	ss << "<html>";
 	ss << "<head>";
@@ -303,23 +302,11 @@ std::string getDirectoryListing(HttpRequest& request)
 	ss << "</body>";
 	ss << "</html>";
 
-	std::string	content = ss.str();
-	std::ostringstream oss;
-	oss << content.size();
-
-	std::string	response = "HTTP/1.1 200 OK\r\n";
-	response += "Content-Type: text/html\r\n";
-	response += "Content-Length: " + oss.str() + "\r\nConnection: close\r\n\r\n";
-	response += content;
-
-	std::cout << response << std::endl;
-
-	return response;
+	return (generatePage(200, ss.str()));
 }
 
 const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& server) const
 {
-	struct stat	statbuf;
 	std::string path = request.path;
 
 	if (path.find(".") == (size_t)-1)
@@ -330,11 +317,13 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 			if (request.location.directoryListing)
 				return getDirectoryListing(request);
 			Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
+			return (getErrorPage(403, server));
 		}
 		Log(Log::WARNING) << "directory not found:'" << path << "'" << Log::endl();
-		return (getErrorPage(403, server));
+		return (getErrorPage(404, server));
 	}
 
+	struct stat	statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
 		Log(Log::WARNING) << "File not found:'" << path << "'" << Log::endl();
@@ -350,16 +339,14 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 		return (getErrorPage(403, server));
 	}
 
-	std::string			content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	std::ostringstream	oss;
-	oss << content.size();
-
-	std::string	response = "HTTP/1.1 200 OK\r\n";
-	response += "Content-Type: text/html\r\n";
-	response += "Content-Length: " + oss.str() + "Connection: close\r\n" + server.getCookies() + "\r\n\r\n";
-	response += content;
-
-	return (response);
+	std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	std::string	page = generatePage(200, content);
+	size_t		header_end = page.find("\r\n\r\n");
+	if (header_end != std::string::npos)
+	{
+		page.insert(header_end, "\r\n" + server.getCookies());
+	}
+	return (page);
 }
 
 const std::string	Webserv::handlePostRequest(const HttpRequest& request, const Server& server) const
@@ -372,21 +359,8 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	else if (request.location.upload_dir.empty())
 	{
 		Log(Log::WARNING) << "Upload directory is not set for POST request" << Log::endl();
-
-		std::ostringstream oss;
-		std::string r = server.handlePostRequest(request.body);
-		oss << r.size();
-		std::string content_length = oss.str();
-
-		Log() << "Post request with body: " << request.body << Log::endl();
-
-		std::string response = "HTTP/1.1 200 OK\r\n";
-		response += "Content-Type: text/plain\r\n";
-		response += "Content-Length: " + content_length + "Connection: close\r\n\r\n";
-		response += r;
-
 		Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
-		return (response);
+		return (generatePage(200, server.handlePostRequest(request.body)));
 	}
 	else
 	{
@@ -411,7 +385,7 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 		outfile.write(request.body.c_str(), request.body.size());
 		outfile.close();
 
-		return ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nFile uploaded to: " + filepath);
+		return (generatePage(200, "File uploaded successfully to " + filepath));
 	}
 }
 
@@ -434,7 +408,7 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 	if (remove(path.c_str()) == 0)
 	{
 		Log(Log::SUCCESS) << "File deleted !" << path << Log::endl();
-		return ("HTTP/1.1 200 OK\r\n\rConnection: close\r\n\r\n");
+		return (generatePage(200, "File deleted successfully"));
 	}
 	else
 	{
@@ -447,7 +421,7 @@ void Webserv::run()
 {
 	Log() << "Running web server..." << Log::endl();
 
-	_epoll_fd = epoll_create(4087);
+	_epoll_fd = epoll_create(EPOLL_CLOEXEC);
 	if (_epoll_fd == -1)
 	{
 		throw std::runtime_error("Failed to create epoll instance: " + static_cast<std::string>(strerror(errno)));
@@ -457,7 +431,8 @@ void Webserv::run()
 	{
 		Log(Log::DEBUG) << "Initializing server" << i << Log::endl();
 
-		for (std::vector<std::pair<std::string, int> >::const_iterator	it = _servers[i].listen.begin(); it != _servers[i].listen.end(); ++it)
+		for (std::vector<std::pair<std::string, int> >::const_iterator	it = _servers[i].listen.begin();
+			it != _servers[i].listen.end(); ++it)
 		{
 			int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 			if (listener_fd < 0)
@@ -470,11 +445,7 @@ void Webserv::run()
 			int	opt = 1;
 			if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 			{
-				throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
-			}
-			if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1)
-			{
-				throw std::runtime_error("setsockopt failed: " + static_cast<std::string>(strerror(errno)));
+				throw std::runtime_error("setsockopt adress failed: " + static_cast<std::string>(strerror(errno)));
 			}
 
 			struct sockaddr_in	server_addr;
@@ -523,7 +494,6 @@ void Webserv::run()
 			if (it != _listener_fds.end())
 			{
 				int	client = accept(fd, NULL, NULL);
-
 				if (client < 0)
 				{
 					Log(Log::ERROR) << "accept failed:" << strerror(errno) << Log::endl();
@@ -544,6 +514,7 @@ void Webserv::run()
 					Log(Log::ERROR) << "epoll_ctl for client failed:" << strerror(errno) << Log::endl();
 					CLOSE(client);
 				}
+
 				continue ;
 			}
 			else if (events[n].events & EPOLLRDHUP)
@@ -570,7 +541,7 @@ void Webserv::run()
 				HttpRequest	httpReq = parseRequest(request, _servers[0]);
 				std::string	host_header;
 
-				std::map<std::string, std::string>::const_iterator host_it = httpReq.headers.find("Host");
+				std::map<std::string, std::string>::const_iterator	host_it = httpReq.headers.find("Host");
 				if (host_it != httpReq.headers.end())
 				{
 					host_header = host_it->second;
@@ -584,10 +555,10 @@ void Webserv::run()
 				Log(Log::DEBUG) << "Host header:" << host_header << Log::endl();
 
 				Server*	server = NULL;
-				for (std::vector<Server>::iterator s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
+				for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 				{
 					Server&	s = *s_it;
-					for (std::vector<std::pair<std::string, int> >::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
+					for (std::vector<std::pair<std::string, int> >::const_iterator	it = s.listen.begin(); it != s.listen.end(); ++it)
 					{
 						if (it->second == port && (host_header.empty() || s.server_name == host_header))
 						{
@@ -601,8 +572,6 @@ void Webserv::run()
 						break ;
 					}
 				}
-
-				Log(Log::DEBUG) << "Server found:" << (server ? server->server_name : "none") << Log::endl();
 
 				if (!server)
 				{
@@ -627,7 +596,7 @@ void Webserv::run()
 
 				httpReq = parseRequest(request, *server);
 				std::string	response;
-				CgiHandler	cgi(httpReq.method, "", ""); //Need ContentType and ContentLength (if apply)
+				CgiHandler	cgi(httpReq.method, "text/html", ""); //Need ContentType and ContentLength (if apply)
 
 				Server::registerSession(addr.sin_addr.s_addr);
 
