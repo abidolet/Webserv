@@ -126,7 +126,7 @@ struct	HttpRequest
 	Location							location;
 	bool								method_allowed;
 };
-std::ostream& operator<<(std::ostream& stream, const HttpRequest& request);
+std::ostream& operator<<(std::ostream& stream, HttpRequest& request);
 
 class	Webserv
 {

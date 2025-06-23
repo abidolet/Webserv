@@ -226,29 +226,30 @@ std::vector<File> getFilesInDir(const std::string path)
 	struct dirent* info;
 	while ((info = readdir(dir)) != NULL)
 	{
-		files.push_back(getFile(path + info->d_name, info)); // TODO: maybe add other info
+		files.push_back(getFile(path + "/" + info->d_name, info)); // TODO: maybe add other info
 	}
 	closedir(dir);
 	return files;
 }
 
-std::string getElt(const File& file, const std::string& path)
+std::string getElt(const File& file, const std::string& path, HttpRequest& req)
 {
-	Log(Log::WARNING) << path + file.name << Log::endl();
+	Log(Log::WARNING) << path + " | " + file.name << Log::endl();
 	std::stringstream ss;
 
-	ss << "<div class='elt'><a href='" << (path + file.name) << "'>" \
+	std::string uri = path[path.size() - 1] == '/' ? path + file.name : path + "/" + file.name;
+	ss << "<div class='elt'><a href='" << uri << "'>" \
 	 << file.name << "</a> <p>" << file.size << "bytes</p></div>";
 	return ss.str();
 }
 
-std::string getURL(HttpRequest& request, std::string path)
+std::string getURL(HttpRequest& request)
 {
 	if (request.path.find(request.location.path) == (size_t)-1)
 		THROW("path not found in request wtf");
 
 	int idx = request.path.find(request.location.path) + request.location.path.size();
-	std::string tmp = path.substr(idx);
+	std::string tmp = request.path.substr(idx);
 	std::string final = request.location.root + tmp;
 	return (final);
 }
@@ -257,6 +258,8 @@ std::string getDirectoryListing(HttpRequest& request)
 {
 	std::stringstream ss;
 	std::vector<File> files = getFilesInDir(request.path);
+
+	// std::cout << request << std::endl;
 
 	ss << "<html>";
 	ss << "<head>";
@@ -270,7 +273,7 @@ std::string getDirectoryListing(HttpRequest& request)
 	ss << "	<div class='elt'><p>name </p> <p> | </p> <p>size</p></div>";
 	for (size_t i = 0; i < files.size(); i++)
 	{
-		ss << getElt(files[i], getURL(request, request.path));
+		ss << getElt(files[i], getURL(request), request);
 	}
 	ss << "</body>";
 	ss << "</html>";
@@ -649,10 +652,14 @@ void Webserv::run()
 	}
 }
 
-std::ostream& operator<<(std::ostream& stream, const HttpRequest& request)
+std::ostream& operator<<(std::ostream& stream, HttpRequest& request)
 {
-	// stream << "" << request.
-	(void)request;
+	std::map<std::string, std::string>::iterator it = request.headers.begin();
+	for (; it != request.headers.end(); ++it)
+	{
+		stream << it->first << " | " << it->second << std::endl;
+	}
+
 	return stream;
 }
 
