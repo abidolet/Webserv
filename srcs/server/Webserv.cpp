@@ -181,16 +181,6 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 		{
 			std::string	index = best_match->index;
 			Log(Log::DEBUG) << "Path is a directory adding index:" << index << Log::endl();
-			while (index[0] == '/')
-			{
-				index = index.substr(1);
-				Log(Log::DEBUG) << "Removed leading slash from index:" << index << Log::endl();
-			}
-			if (full_path[full_path.length() - 1] != '/')
-			{
-				full_path += '/';
-				Log(Log::DEBUG) << "Added trailing slash to full path:" << full_path << Log::endl();
-			}
 			full_path += best_match->index;
 			Log(Log::DEBUG) << "Added index file:" << full_path << Log::endl();
 		}
@@ -400,19 +390,16 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 	}
 }
 
-uint32_t strToAddr(const std::string& str)
+uint32_t	strToAddr(const std::string& str)
 {
 	std::vector<std::string> split = Utils::strsplit(str, '.');
 	if (split.size() != 4)
 	{
 		Log(Log::ERROR) << "ip addr is in wrong format, abording strToAddr" << Log::endl();
-		return 0;
+		return (0);
 	}
 
-	uint8_t	a;
-	uint8_t	b;
-	uint8_t	c;
-	uint8_t	d;
+	uint8_t	a, b, c, d;
 
 	a = std::atoi(split[0].c_str());
 	b = std::atoi(split[1].c_str());
@@ -469,13 +456,13 @@ void Webserv::run()
 
 			if (res)
 			{
-				uint32_t addr = strToAddr(it->addr);
+				uint32_t	addr = strToAddr(it->addr);
 				server_addr.sin_addr.s_addr = addr;
 				freeaddrinfo(res);
 			}
 			else
 			{
-				THROW("getaddrinfo returned no results");
+				THROW("getaddrinfo returned no results: ");
 			}
 
 			server_addr.sin_port = htons(it->port);
