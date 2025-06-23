@@ -69,6 +69,7 @@ struct Listen
 	Listen(std::string _addr, int _port) : addr(_addr), port(_port) { };
 	bool operator==(const Listen& other);
 };
+size_t find(std::vector<Listen> vec, Listen toFind);
 
 struct	Server
 {
