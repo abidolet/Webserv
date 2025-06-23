@@ -74,7 +74,8 @@ const std::string	Webserv::getErrorPage(const int error_code, const Server& serv
 	}
 
 	Log(Log::DEBUG) << "Custom error page not found, returning default" << Log::endl();
-	return (generatePage(error_code, ""));
+	std::string	content = "<html><body><h1>" + toString(error_code) + " " + getStatusMessage(error_code) + "</h1></body></html>";
+	return (generatePage(error_code, content));
 }
 
 const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Server& server) const
@@ -149,6 +150,8 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	{
 		Log(Log::DEBUG) << "Best location match:" << best_match->root << "with path:" << best_match->path << Log::endl();
 		request.location = *best_match;
+		// Log(Log::DEBUG) << "GDREGGREGRERERGR" << request.path.substr(best_match->root.length()) << Log::endl();
+		request.path = request.path.substr(best_match->root.length());
 		Log(Log::DEBUG) << "Checking allowed methods for location..." << Log::endl();
 		for (std::vector<std::string>::const_iterator it = best_match->allowed_methods.begin();
 			it != best_match->allowed_methods.end(); ++it)
@@ -168,27 +171,18 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 		std::string	full_path = best_match->path;
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
-		while (full_path[0] == '/')
-		{
-			full_path.erase(0, 1);
-			Log(Log::DEBUG) << "Removed leading slash from path:" << full_path << Log::endl();
-		}
-		while (full_path[full_path.length() - 1] == '/')
-		{
-			full_path.erase(full_path.length() - 1);
-			Log(Log::DEBUG) << "Removed trailing slash from path:" << full_path << Log::endl();
-		}
 		while (!request.path.empty() && request.path[0] == '/')
 		{
-			request.path.erase(0, 1);
 			Log(Log::DEBUG) << "Removed leading slash from path:" << request.path << Log::endl();
+			request.path.erase(0, 1);
 		}
 		while (!request.path.empty() && request.path[request.path.length() - 1] == '/')
 		{
 			Log(Log::DEBUG) << "Removed trailing slash from path:" << request.path << Log::endl();
 			request.path.erase(request.path.length() - 1);
 		}
-		full_path = '/' + full_path + '/' + request.path;
+		Log(Log::DEBUG) << "Final path after cleaning:" << request.path << Log::endl();
+		full_path += '/' + request.path;
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
