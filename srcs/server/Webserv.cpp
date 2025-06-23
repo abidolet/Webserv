@@ -51,10 +51,26 @@ static const std::string	getStatusMessage(const int code)
 	}
 }
 
-static const std::string	generatePage(const int error_code, const std::string &content)
+static const std::string	generatePage(const int code, const std::string &content)
 {
-	return ("HTTP/1.1 " + toString(error_code) + " " + getStatusMessage(error_code) + "\r\n" + "Content-Type: text/html\r\n"
+	return ("HTTP/1.1 " + toString(code) + " " + getStatusMessage(code) + "\r\n" + "Content-Type: text/html\r\n"
 		+ "Connection: close\r\n" + "Content-Length: " + toString(content.size()) + "\r\n\r\n" + content);
+}
+
+const std::string	Webserv::getUrlPage(const int code, const std::string &content, const std::string &location) const
+{
+	std::ostringstream	response;
+	response << "HTTP/1.1 " << code << " " << getStatusMessage(code) << "\r\n";
+
+	if (!location.empty() && (code == 301 || code == 302))
+	{
+		response << "Location: " << location << "\r\n";
+	}
+
+	response << "Content-Type: text/html\r\n" << "Connection: close\r\n"
+		<< "Content-Length: " << content.size() << "\r\n\r\n" << content;
+
+	return (response.str());
 }
 
 const std::string	Webserv::getErrorPage(const int error_code, const Server& server) const
@@ -90,6 +106,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 		std::istringstream	request_line(line);
 		request_line >> request.method >> request.path;
+		request.path = '/' + Utils::strtrim(request.path, "/");
 
 		Log(Log::DEBUG) << "Method:" << request.method << "| Path:" << request.path << Log::endl();
 	}
@@ -170,8 +187,6 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 		std::string	full_path = best_match->path;
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
-		request.path = Utils::strtrim(request.path, "/");
-		Log(Log::DEBUG) << "Final path after cleaning:" << request.path << Log::endl();
 		full_path += '/' + request.path;
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
@@ -283,8 +298,7 @@ std::string getDirectoryListing(HttpRequest& request)
 
 const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& server) const
 {
-	std::string path = request.path;
-
+	std::string	path = request.path;
 	if (path.find(".") == (size_t)-1)
 	{
 		if (Utils::dirAccess(request.path))
@@ -617,7 +631,12 @@ void Webserv::run()
 
 				Server::registerSession(addr.sin_addr.s_addr);
 
-				if (!httpReq.method_allowed)
+				if (!httpReq.location.redirection.second.empty())
+				{
+					response = getUrlPage(httpReq.location.redirection.first,
+						"<html><body><h1>Redirecting...</h1></body></html>", httpReq.location.redirection.second);
+				}
+				else if (!httpReq.method_allowed)
 				{
 					response = getErrorPage(405, *server);
 				}

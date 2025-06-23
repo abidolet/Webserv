@@ -142,7 +142,7 @@ class	Webserv
 		const std::string	handleDeleteRequest(const std::string& path, const Server& server) const;
 
 		const std::string	getErrorPage(const int error_code, const Server& server) const;
-
+		const std::string	getUrlPage(const int error_code, const std::string &content, const std::string &location) const;
 	public:
 		Webserv(const std::string& file);
 		~Webserv();
