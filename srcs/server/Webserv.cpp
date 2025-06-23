@@ -403,6 +403,28 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 	}
 }
 
+uint32_t strToAddr(const std::string& str)
+{
+	std::vector<std::string> split = Utils::strsplit(str, '.');
+	if (split.size() != 4)
+	{
+		Log(Log::ERROR) << "ip addr is in wrong format, abording strToAddr" << Log::endl();
+		return 0;
+	}
+
+	uint8_t	a;
+	uint8_t	b;
+	uint8_t	c;
+	uint8_t	d;
+
+	a = std::atoi(split[0].c_str());
+	b = std::atoi(split[1].c_str());
+	c = std::atoi(split[2].c_str());
+	d = std::atoi(split[3].c_str());
+
+	return ((a << 24) | (b << 16) | (c << 8) | d);
+}
+
 void Webserv::run()
 {
 	Log() << "Running web server..." << Log::endl();
@@ -450,7 +472,8 @@ void Webserv::run()
 
 			if (res)
 			{
-				server_addr.sin_addr.s_addr = reinterpret_cast<sockaddr_in*>(res->ai_addr)->sin_addr.s_addr;
+				uint32_t addr = strToAddr(it->addr);
+				server_addr.sin_addr.s_addr = addr;
 				freeaddrinfo(res);
 			}
 			else
@@ -602,7 +625,7 @@ void Webserv::run()
 				}
 
 				httpReq = parseRequest(request, *server);
-				std::string	response;
+				std::string	response = "";
 				CgiHandler	cgi(httpReq.method, "text/html", ""); //Need ContentType and ContentLength (if apply)
 
 				Server::registerSession(addr.sin_addr.s_addr);
