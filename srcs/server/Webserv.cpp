@@ -229,7 +229,6 @@ File getFile(std::string filename, struct dirent* infos)
 
 	return (File) {
 		.name=infos->d_name,
-		.last_modif_date=0,
 		.size=(st.st_size),
 	};
 }
@@ -282,7 +281,7 @@ std::string getDirectoryListing(HttpRequest& request)
 	ss << "<html>";
 	ss << "<head>";
 	ss << "	<style>";
-	ss << "	.elt {display:flex; flex-direction:row; gap: 65px; align-items: center; justify-content: space-between; width: 25vw;}";
+	ss << "	.elt {display:flex; flex-direction:row; gap: 65px; align-items: center; justify-content: space-between; width: 33svw;}";
 	ss << "	body {display:flex; flex-direction:column;}";
 	ss << "	</style>";
 	ss << "</head>";

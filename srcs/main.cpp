@@ -25,7 +25,6 @@ void	handle_signal(int signal)
 
 int main (int argc, char *argv[])
 {
-	// Log::disableFlags(F_DEBUG);
 	signal(SIGINT, handle_signal);
 	signal(SIGQUIT, handle_signal);
 	signal(SIGTERM, handle_signal);
