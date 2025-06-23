@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <dirent.h>
 #include "ParserUtils.hpp"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 #define MAX_EVENTS 1024
 
@@ -150,7 +153,6 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	{
 		Log(Log::DEBUG) << "Best location match:" << best_match->root << "with path:" << best_match->path << Log::endl();
 		request.location = *best_match;
-		// Log(Log::DEBUG) << "GDREGGREGRERERGR" << request.path.substr(best_match->root.length()) << Log::endl();
 		request.path = request.path.substr(best_match->root.length());
 		Log(Log::DEBUG) << "Checking allowed methods for location..." << Log::endl();
 		for (std::vector<std::string>::const_iterator it = best_match->allowed_methods.begin();
@@ -434,7 +436,28 @@ void Webserv::run()
 
 			struct sockaddr_in	server_addr;
 			server_addr.sin_family = AF_INET;
-			server_addr.sin_addr.s_addr = INADDR_ANY;
+
+			struct addrinfo		hints;
+			std::memset(&hints, 0, sizeof(hints));
+			hints.ai_family = AF_INET;
+			hints.ai_flags = AI_NUMERICHOST;
+
+			struct addrinfo*	res = NULL;
+			if (getaddrinfo(it->addr.c_str(), NULL, &hints, &res) != 0)
+			{
+				throw std::runtime_error("getaddrinfo failed");
+			}
+
+			if (res)
+			{
+				server_addr.sin_addr.s_addr = reinterpret_cast<sockaddr_in*>(res->ai_addr)->sin_addr.s_addr;
+				freeaddrinfo(res);
+			}
+			else
+			{
+				throw std::runtime_error("getaddrinfo returned no results");
+			}
+
 			server_addr.sin_port = htons(it->port);
 
 			Log(Log::DEBUG) << "Server listening on port " << it->port << Log::endl();
