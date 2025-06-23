@@ -171,16 +171,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 		std::string	full_path = best_match->path;
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
-		while (!request.path.empty() && request.path[0] == '/')
-		{
-			Log(Log::DEBUG) << "Removed leading slash from path:" << request.path << Log::endl();
-			request.path.erase(0, 1);
-		}
-		while (!request.path.empty() && request.path[request.path.length() - 1] == '/')
-		{
-			Log(Log::DEBUG) << "Removed trailing slash from path:" << request.path << Log::endl();
-			request.path.erase(request.path.length() - 1);
-		}
+		request.path = Utils::strtrim(request.path, "/");
 		Log(Log::DEBUG) << "Final path after cleaning:" << request.path << Log::endl();
 		full_path += '/' + request.path;
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
