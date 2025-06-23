@@ -415,7 +415,7 @@ void Webserv::run()
 	{
 		Log(Log::DEBUG) << "Initializing server" << i << Log::endl();
 
-		for (std::vector<std::pair<std::string, int> >::const_iterator	it = _servers[i].listen.begin();
+		for (std::vector<Listen>::const_iterator	it = _servers[i].listen.begin();
 			it != _servers[i].listen.end(); ++it)
 		{
 			int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -435,9 +435,9 @@ void Webserv::run()
 			struct sockaddr_in	server_addr;
 			server_addr.sin_family = AF_INET;
 			server_addr.sin_addr.s_addr = INADDR_ANY;
-			server_addr.sin_port = htons(it->second);
+			server_addr.sin_port = htons(it->port);
 
-			Log(Log::DEBUG) << "Server listening on port " << it->second << Log::endl();
+			Log(Log::DEBUG) << "Server listening on port " << it->port << Log::endl();
 
 			if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
 			{
@@ -542,9 +542,9 @@ void Webserv::run()
 				for (std::vector<Server>::iterator	s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 				{
 					Server&	s = *s_it;
-					for (std::vector<std::pair<std::string, int> >::const_iterator	it = s.listen.begin(); it != s.listen.end(); ++it)
+					for (std::vector<Listen>::const_iterator	it = s.listen.begin(); it != s.listen.end(); ++it)
 					{
-						if (it->second == port && (host_header.empty() || s.server_name == host_header))
+						if (it->port == port && (host_header.empty() || s.server_name == host_header))
 						{
 							server = &s;
 							server->lastUID = addr.sin_addr.s_addr;
@@ -562,9 +562,9 @@ void Webserv::run()
 					for (std::vector<Server>::iterator s_it = _servers.begin(); s_it != _servers.end(); ++s_it)
 					{
 						Server&	s = *s_it;
-						for (std::vector<std::pair<std::string, int> >::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
+						for (std::vector<Listen>::const_iterator it = s.listen.begin(); it != s.listen.end(); ++it)
 						{
-							if (it->second == port)
+							if (it->port == port)
 							{
 								server = &s;
 								server->lastUID = addr.sin_addr.s_addr;
@@ -624,4 +624,9 @@ std::ostream& operator<<(std::ostream& stream, const HttpRequest& request)
 	// stream << "" << request.
 	(void)request;
 	return stream;
+}
+
+bool Listen::operator==(const Listen& other)
+{
+	return (other.addr == addr && other.port == port);
 }

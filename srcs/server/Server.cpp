@@ -335,7 +335,7 @@ void	Server::setupListen(Block &block)
 	if (found.empty())
 		return;
 
-	std::vector<std::pair<std::string, int> > result;
+	std::vector<Listen> result;
 	std::vector<std::string>::iterator it = found.begin();
 	for ( ; it != found.end(); ++it)
 	{
@@ -349,7 +349,7 @@ void	Server::setupListen(Block &block)
 			port = std::strtol(split[0].c_str(), &endl, 10);
 			if (endl[0] != '\0')
 				throw Parser::InvalidDirectiveException("listen", *it);
-			result.push_back(std::pair<std::string, int>("0.0.0.0", port));
+			result.push_back(Listen("0.0.0.0", port));
 		}
 		else
 		{
@@ -360,7 +360,7 @@ void	Server::setupListen(Block &block)
 			if (endl[0] != '\0')
 				throw Parser::InvalidDirectiveException("listen", *it);
 
-			result.push_back(std::pair<std::string, int>(split[0], port));
+			result.push_back(Listen(split[0], port));
 		}
 	}
 	listen = result;

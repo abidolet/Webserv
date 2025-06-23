@@ -59,12 +59,21 @@ struct Session
 };
 std::ostream& operator<<(std::ostream& stream, const Session& session);
 
+struct Listen
+{
+	std::string	addr;
+	int 		port;
+
+	Listen(std::string _addr, int _port) : addr(_addr), port(_port) { };
+	bool operator==(const Listen& other);
+};
+
 struct	Server
 {
 	Server()
 		: root("/"), server_name("localhost"), client_max_body_size(0)
 	{
-		listen.push_back(std::pair<std::string, int>("0.0.0.0", 8080));
+		listen.push_back(Listen("0.0.0.0", 8080));
 	}
 
 	std::string handlePostRequest(std::string body) const;
@@ -78,17 +87,16 @@ struct	Server
 	static void	registerSession(const uint uid);
 
 	std::string					root;
-
 	std::string					server_name;
 	size_t						client_max_body_size;
 
 	std::vector<std::string>	allowed_methods;
 	std::vector<Location>		locations;
 
-	std::map<int, std::string>					error_pages;
-	std::vector<std::pair<std::string, int> >	listen;
+	std::map<int, std::string>	error_pages;
+	std::vector<Listen>			listen;
 
-	bool										is_default;
+	bool						is_default;
 
 	std::vector<std::string>	cookies;
 	uint						lastUID;
