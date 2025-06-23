@@ -103,7 +103,6 @@ private:
 struct File
 {
 	std::string name;
-	std::string last_modif_date;
 	long int	size;
 };
 

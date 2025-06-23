@@ -148,6 +148,22 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 	serv.locations = locations;
 }
 
+void removeExcessListen(std::vector<Server> servs)
+{
+	std::vector<Server>::iterator it = servs.end();
+
+	for ( ; it != servs.begin() ; --it)
+	{
+		std::vector<Server>::iterator subIt = it;
+		subIt--;
+		for ( ; it != servs.begin() ; --it)
+		{
+			
+		}
+	}
+	
+}
+
 std::vector<Server> Parser::populateServerInfos()
 {
 	std::vector<Server> servs;
