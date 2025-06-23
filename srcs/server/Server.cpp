@@ -365,3 +365,22 @@ void	Server::setupListen(Block &block)
 	}
 	listen = result;
 }
+
+
+//
+// Listen
+//
+size_t find(std::vector<Listen> vec, Listen toFind)
+{
+	for (size_t i = 0; i < vec.size(); i++)
+	{
+		if (toFind == vec[i])
+			return i;
+	}
+	return -1;
+}
+
+bool Listen::operator==(const Listen& other)
+{
+	return (other.addr == addr && other.port == port);
+}

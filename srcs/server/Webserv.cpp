@@ -626,7 +626,4 @@ std::ostream& operator<<(std::ostream& stream, const HttpRequest& request)
 	return stream;
 }
 
-bool Listen::operator==(const Listen& other)
-{
-	return (other.addr == addr && other.port == port);
-}
+	

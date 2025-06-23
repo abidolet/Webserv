@@ -148,24 +148,27 @@ void populateServerSubInfos(Block serv_block, Server& serv)
 	serv.locations = locations;
 }
 
-// void removeExcessListen(std::vector<Server> servs)
-// {
-// 	std::vector<Server>::iterator it = servs.end();
+void removeExcessListen(std::vector<Server>& servs)
+{
+	std::vector<Listen> pastListen;
 
-// 	for ( ; it != servs.begin() ; --it)
-// 	{
-// 		std::vector<Server>::iterator subIt = it;
-// 		subIt--;
-// 		for ( ; it != servs.begin() ; --it)
-// 		{
-// 			for (size_t i = 0; i < it->listen.size(); i++)
-// 			{
-// 				//  std::find(subIt->listen.begin(), subIt->listen.end(), it->listen[i]))
-// 			}
-// 		}
-// 	}
-	
-// }
+	for (size_t i = 0; i < servs.size(); i++)
+	{
+		for (size_t j = 0; j < servs[i].listen.size(); j++)
+		{
+			size_t idx = find(pastListen, servs[i].listen[j]);
+			if (idx != (size_t)-1)
+			{
+				servs[i].listen.erase(servs[i].listen.begin() + idx);
+				Log(Log::WARNING) << "duplicate listen directive found, the duplicate will be ignored" << Log::endl();
+			}
+			else
+			{
+				pastListen.push_back(servs[i].listen[j]);
+			}
+		}
+	}
+}
 
 std::vector<Server> Parser::populateServerInfos()
 {
@@ -210,10 +213,13 @@ std::vector<Server> Parser::populateServerInfos()
 	if (m_block.inners.size() == 0) // empty file
 		servs.push_back(Server());
 
+	removeExcessListen(servs);
+
 	for (size_t i = 0; i < servs.size(); i++)
 	{
 		Utils::printServConfig(servs[i]);
 	}
+
 
 	Log(Log::SUCCESS) << m_filepath << " was parsed successfuly" << Log::endl();
 	return servs;
