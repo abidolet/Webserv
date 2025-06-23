@@ -18,7 +18,13 @@
 struct 	Location
 {
 	Location()
-		: path("/"), root("/"), index("index.html"), is_cgi(false) { }
+	:	path("/"), root("/"), index(""),
+		is_cgi(false), directoryListing(false), redirection(-1, "") // ca casse si on met dirListing a true
+		{
+			std::string	defaults[] = {"GET", "POST", "DELETE"};
+			allowed_methods = std::vector<std::string>(defaults, defaults + 3);
+		}
+		
 	Location(Block& block);
 
 	std::string		path;

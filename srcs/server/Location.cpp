@@ -16,6 +16,17 @@ void assertLocation(const Location& location, const Block& block)
 		throw std::runtime_error("cannot have only one cgi directive; " + block.block_name);
 }
 
+std::string processPath(std::string old, bool isCgi = false)
+{
+	if (old.empty())
+		return std::string();
+	if (old[0] != '/' && !isCgi)
+		throw std::runtime_error("path need to be absolute; `" + old + "'");
+
+	std::string path = Utils::strtrim(old, "/");
+	return isCgi ? path : "/" + path;
+}
+
 Location::Location(Block &block)
 	:	path("/"), root("/"), index(""),
 		is_cgi(false), directoryListing(false), redirection(-1, "")
@@ -25,6 +36,14 @@ Location::Location(Block &block)
 	block.loadSingleDirective("index", index);
 	block.loadSingleDirective("cgi_pass", cgi_pass);
 	block.loadSingleDirective("upload_dir", upload_dir);
+
+	if (!cgi_extension.empty())
+		is_cgi = true;
+
+	path = processPath(path);
+	root = is_cgi ? processPath(root, true) : processPath(root);
+	cgi_pass = processPath(cgi_pass);
+	upload_dir = processPath(upload_dir);
 
 	// TODO faire une rediretion assertion
 	{
@@ -50,8 +69,6 @@ Location::Location(Block &block)
 	}
 
 	assertLocation(*this, block);
-	if (!cgi_extension.empty())
-		is_cgi = true;
 }
 
 void Location::setupLocationRoot(const Block& block)

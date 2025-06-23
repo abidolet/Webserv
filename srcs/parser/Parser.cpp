@@ -180,9 +180,11 @@ std::vector<Server> Parser::populateServerInfos()
 		{
 			page->second = joinPath(serv, page->second, page->second);
 		}
-		serv.runSelfCheck();
 
-		// can be disabled by settings RUN_SERV_SELF_CHECK to 0 in webserv.hpp
+		if (serv.locations.size() == 0)
+			serv.locations.push_back(Location());
+
+		serv.runSelfCheck();
 		servs.push_back(serv);
 	}
 
