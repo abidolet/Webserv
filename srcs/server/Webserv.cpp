@@ -61,18 +61,15 @@ const std::string	Webserv::getErrorPage(const int error_code, const Server& serv
 {
 	Log(Log::DEBUG) << "Searching custom error page for code" << error_code << Log::endl();
 
-	if (error_code != 500)
+	std::map<int, std::string>::const_iterator it = server.error_pages.find(error_code);
+	if (it != server.error_pages.end())
 	{
-		std::map<int, std::string>::const_iterator it = server.error_pages.find(error_code);
-		if (it != server.error_pages.end())
+		std::ifstream	file(it->second.c_str(), std::ios::binary);
+		if (file)
 		{
-			std::ifstream	file(it->second.c_str(), std::ios::binary);
-			if (file)
-			{
-				Log(Log::DEBUG) << "Custom error page found:" << it->second << Log::endl();
-				std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-				return (generatePage(error_code, content));
-			}
+			Log(Log::DEBUG) << "Custom error page found:" << it->second << Log::endl();
+			std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+			return (generatePage(error_code, content));
 		}
 	}
 
@@ -133,7 +130,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 	for (size_t	i = 0; i < server.locations.size(); ++i)
 	{
-		const Location& loc = server.locations[i];
+		const Location&	loc = server.locations[i];
 		Log(Log::DEBUG) << "Checking location" << i << ":" << loc.root << Log::endl();
 
 		if (request.path.compare(0, loc.root.length(), loc.root) == 0)
@@ -258,7 +255,7 @@ std::string getElt(const File& file, const std::string& path)
 std::string getURL(HttpRequest& request, std::string path)
 {
 	if (request.path.find(request.location.path) == (size_t)-1)
-		throw std::runtime_error("path not found in request wtf");
+		THROW("path not found in request wtf");
 
 	int idx = request.path.find(request.location.path) + request.location.path.size();
 	std::string tmp = path.substr(idx);
@@ -366,7 +363,7 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 		std::ofstream outfile(filepath.c_str(), std::ios::binary);
 		if (!outfile)
 		{
-			return (getErrorPage(500, server));
+			return (generatePage(500, "Failed to open file for writing: " + filepath));
 		}
 		outfile.write(request.body.c_str(), request.body.size());
 		outfile.close();
@@ -410,7 +407,7 @@ void Webserv::run()
 	_epoll_fd = epoll_create(EPOLL_CLOEXEC);
 	if (_epoll_fd == -1)
 	{
-		throw std::runtime_error("Failed to create epoll instance: " + static_cast<std::string>(strerror(errno)));
+		THROW("Failed to create epoll instance: ");
 	}
 
 	for (size_t i = 0; i < _servers.size(); ++i)
@@ -423,7 +420,7 @@ void Webserv::run()
 			int	listener_fd = socket(AF_INET, SOCK_STREAM, 0);
 			if (listener_fd < 0)
 			{
-				throw std::runtime_error("Failed to create socket: " + static_cast<std::string>(strerror(errno)));
+				THROW("Failed to create socket: ");
 			}
 
 			_listener_fds.push_back(listener_fd);
@@ -431,7 +428,7 @@ void Webserv::run()
 			int	opt = 1;
 			if (setsockopt(listener_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
 			{
-				throw std::runtime_error("setsockopt adress failed: " + static_cast<std::string>(strerror(errno)));
+				THROW("setsockopt adress failed: ");
 			}
 
 			struct sockaddr_in	server_addr;
@@ -445,17 +442,18 @@ void Webserv::run()
 			struct addrinfo*	res = NULL;
 			if (getaddrinfo(it->addr.c_str(), NULL, &hints, &res) != 0)
 			{
-				throw std::runtime_error("getaddrinfo failed");
+				THROW("getaddrinfo failed");
 			}
 
 			if (res)
 			{
+				Log(Log::DEBUG) << "getaddrinfo returned address: " << it->addr << Log::endl();
 				server_addr.sin_addr.s_addr = reinterpret_cast<sockaddr_in*>(res->ai_addr)->sin_addr.s_addr;
 				freeaddrinfo(res);
 			}
 			else
 			{
-				throw std::runtime_error("getaddrinfo returned no results");
+				THROW("getaddrinfo returned no results");
 			}
 
 			server_addr.sin_port = htons(it->port);
@@ -464,12 +462,12 @@ void Webserv::run()
 
 			if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
 			{
-				throw std::runtime_error("bind failed: " + static_cast<std::string>(strerror(errno)));
+				THROW("bind failed: ");
 			}
 
 			if (listen(listener_fd, SOMAXCONN) == -1)
 			{
-				throw std::runtime_error("listen failed: " + static_cast<std::string>(strerror(errno)));
+				THROW("listen failed: ");
 			}
 
 			struct epoll_event	ev;
@@ -477,7 +475,7 @@ void Webserv::run()
 			ev.data.fd = listener_fd;
 			if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, listener_fd, &ev) == -1)
 			{
-				throw std::runtime_error("epoll_ctl failed: " + static_cast<std::string>(strerror(errno)));
+				THROW("epoll_ctl failed: ");
 			}
 		}
 	}
@@ -489,7 +487,7 @@ void Webserv::run()
 		int	nfds = epoll_wait(_epoll_fd, events, MAX_EVENTS, 100);
 		if (nfds == -1)
 		{
-			Log(Log::ERROR) << "epoll_wait failed: " << strerror(errno) << Log::endl();
+			ERROR("epoll_wait failed: ");
 			continue ;
 		}
 
@@ -503,7 +501,7 @@ void Webserv::run()
 				int	client = accept(fd, NULL, NULL);
 				if (client < 0)
 				{
-					Log(Log::ERROR) << "accept failed:" << strerror(errno) << Log::endl();
+					ERROR("accept failed:");
 					continue ;
 				}
 
@@ -518,7 +516,7 @@ void Webserv::run()
 				client_ev.data.fd = client;
 				if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client, &client_ev) == -1)
 				{
-					Log(Log::ERROR) << "epoll_ctl for client failed:" << strerror(errno) << Log::endl();
+					ERROR("epoll_ctl for client failed:");
 					CLOSE(client);
 				}
 
@@ -632,7 +630,7 @@ void Webserv::run()
 
 				if (send(fd, response.c_str(), response.size(), 0) == -1)
 				{
-					Log(Log::ERROR) << "send error:" << strerror(errno) << Log::endl();
+					ERROR("send error:");
 				}
 
 				epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);

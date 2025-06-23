@@ -14,6 +14,8 @@
 #endif
 
 # define CLOSE(fd) if (fd > 1) {close(fd); fd = -1;}
+# define THROW(msg) throw std::runtime_error(msg + static_cast<std::string>(strerror(errno)));
+# define ERROR(msg) Log(Log::ERROR) << msg << strerror(errno) << Log::endl();
 
 struct 	Location
 {
@@ -24,7 +26,7 @@ struct 	Location
 			std::string	defaults[] = {"GET", "POST", "DELETE"};
 			allowed_methods = std::vector<std::string>(defaults, defaults + 3);
 		}
-		
+
 	Location(Block& block);
 
 	std::string		path;
