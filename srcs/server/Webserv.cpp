@@ -565,7 +565,7 @@ void Webserv::run()
 					Server&	s = *s_it;
 					for (std::vector<Listen>::const_iterator	it = s.listen.begin(); it != s.listen.end(); ++it)
 					{
-						if (it->port == port && (host_header.empty() || s.server_name == host_header))
+						if (it->port == port && (host_header.empty() || s.server_names[0] == host_header))
 						{
 							server = &s;
 							server->lastUID = addr.sin_addr.s_addr;
