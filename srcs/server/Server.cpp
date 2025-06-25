@@ -12,7 +12,7 @@ std::vector<Session> readSessions(const std::string& sessionFilepath);
 std::map<std::string, std::string> getData(std::string body)
 {
 	std::map<std::string, std::string> data;
-	
+
 	std::vector<std::string> argSplit = Utils::strsplit(body, '&');
 	std::vector<std::string>::iterator it = argSplit.begin();
 
@@ -63,14 +63,14 @@ std::string Server::handlePostRequest(HttpRequest request) const
 		outfile.write(request.body.c_str(), request.body.size());
 		outfile.close();
 
-		return (generatePage(200, "File uploaded successfully to " + filepath));
+		return (generatePage(201, "File uploaded successfully to " + filepath));
 	}
 	if (it->second == "client_visits")
 	{
 		std::map<std::string, std::string>::iterator uid = request.headers.find("UID");
 		if (uid == request.headers.end())
 			return "missing uid options";
-		
+
 		std::vector<Session> sessions = readSessions("./.sessions");
 		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
 		return ss.str();
@@ -109,7 +109,7 @@ void Server::cookiesAssert()
 	}
 }
 
-std::string Server::getCookies() const 
+std::string Server::getCookies() const
 {
 	const std::string declaration = "Set-Cookie: ";
 	std::string cookies;
@@ -123,7 +123,7 @@ std::string Server::getCookies() const
 	//TODO: need to add the session uid as a cookie
 	std::vector<Session> sessions = readSessions("./.sessions");
 	Session* session = Session::find(sessions, lastUID);
-	
+
 	if (session != NULL)
 	{
 		std::stringstream ss;
@@ -132,7 +132,7 @@ std::string Server::getCookies() const
 		cookies += "session_uid=" + ss.str();
 		cookies += "\r\n";
 	}
-	
+
 	return cookies;
 }
 
@@ -193,10 +193,10 @@ void createFile(const std::string& filepath)
 
 std::vector<Session> readSessions(const std::string& sessionFilepath)
 {
-	
+
 	if (Utils::fileAccess(sessionFilepath) == false)
 		createFile(sessionFilepath);
-	
+
 	std::ifstream			stream;
 	std::vector<Session>	sessions;
 	std::string				line;
@@ -204,7 +204,7 @@ std::vector<Session> readSessions(const std::string& sessionFilepath)
 	stream.open(sessionFilepath.c_str());
 	if (stream.is_open() == false)
 		throw Parser::InvalidDirOrFileException(sessionFilepath);
-	
+
 	while (std::getline(stream, line))
 	{
 		if (line.empty())

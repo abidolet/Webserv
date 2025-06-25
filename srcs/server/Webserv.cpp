@@ -42,6 +42,8 @@ static const std::string	getStatusMessage(const int code)
 	switch(code)
 	{
 		case 200:	return ("OK");
+		case 201:	return ("Created");
+		case 301:	return ("Moved Permanently");
 		case 403:	return ("Forbidden");
 		case 404:	return ("Not Found");
 		case 405:	return ("Method Not Allowed");
@@ -54,7 +56,7 @@ static const std::string	getStatusMessage(const int code)
 const std::string	generatePage(const int code, const std::string &content)
 {
 	return ("HTTP/1.1 " + toString(code) + " " + getStatusMessage(code) + "\r\n" + "Content-Type: text/html\r\n"
-		+ "Connection: close\r\n" + "Content-Length: " + toString(content.size()) + "\r\n\r\n" + content);
+		+ "Connection: close\r\n" + "Content-Length: " + toString(content.length() + 2) + "\r\n\r\n" + content + "\r\n");
 }
 
 const std::string	Webserv::getUrlPage(const int code, const std::string &content, const std::string &location) const
@@ -62,13 +64,13 @@ const std::string	Webserv::getUrlPage(const int code, const std::string &content
 	std::ostringstream	response;
 	response << "HTTP/1.1 " << code << " " << getStatusMessage(code) << "\r\n";
 
-	if (!location.empty() && (code == 301 || code == 302))
+	if (!location.empty() && code == 301)
 	{
 		response << "Location: " << location << "\r\n";
 	}
 
 	response << "Content-Type: text/html\r\n" << "Connection: close\r\n"
-		<< "Content-Length: " << content.size() << "\r\n\r\n" << content;
+		<< "Content-Length: " << content.length() << "\r\n\r\n" << content;
 
 	return (response.str());
 }
@@ -273,8 +275,6 @@ std::string getDirectoryListing(HttpRequest& request)
 {
 	std::stringstream ss;
 	std::vector<File> files = getFilesInDir(request.path);
-
-	// std::cout << request << std::endl;
 
 	ss << "<html>";
 	ss << "<head>";
@@ -608,7 +608,7 @@ void Webserv::run()
 				if (!httpReq.location.redirection.second.empty())
 				{
 					response = getUrlPage(httpReq.location.redirection.first,
-						"<html><body><h1>Redirecting...</h1></body></html>", httpReq.location.redirection.second);
+						"<html><body><h1>Redirecting...</h1></body></html>\r\n", httpReq.location.redirection.second);
 				}
 				else if (!httpReq.method_allowed)
 				{
