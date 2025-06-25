@@ -368,7 +368,7 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 		return (getErrorPage(403, server));
 	}
 
-	if (remove(path.c_str()) == 0)
+	if (std::remove(path.c_str()) == 0)
 	{
 		Log(Log::SUCCESS) << "File deleted !" << path << Log::endl();
 		return (generatePage(200, "File deleted successfully\n"));
@@ -439,9 +439,10 @@ void Webserv::run()
 			hints.ai_flags = AI_NUMERICHOST;
 
 			struct addrinfo*	res = NULL;
-			if (getaddrinfo(it->addr.c_str(), NULL, &hints, &res) != 0)
+			int	ret = getaddrinfo(it->addr.c_str(), NULL, &hints, &res);
+			if (ret != 0)
 			{
-				THROW("getaddrinfo failed");
+				throw std::runtime_error("getaddrinfo failed" + static_cast<std::string>(gai_strerror(ret)));
 			}
 
 			if (res)
@@ -452,7 +453,7 @@ void Webserv::run()
 			}
 			else
 			{
-				THROW("getaddrinfo returned no results: ");
+				throw std::runtime_error("getaddrinfo returned no results: " + static_cast<std::string>(gai_strerror(ret)));
 			}
 
 			server_addr.sin_port = htons(it->port);
