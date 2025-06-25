@@ -26,23 +26,11 @@ std::map<std::string, std::string> getData(std::string body)
 	return data;
 }
 
-std::string Server::handlePostRequest(std::string body) const
+std::string Server::handlePostRequest(HttpRequest request) const
 {
-	if (body.empty())
-		return body;
-	std::map<std::string, std::string> data;
-	try
-	{
-		data = getData(body);
-	}
-	catch(const std::exception& e)
-	{
-		return "invalid request";
-	}
-	
-	std::map<std::string, std::string>::iterator it = data.find("grant_type");
-	if (it == data.end())
-		return body;
+	std::map<std::string, std::string>::iterator it = request.headers.find("request_type");
+	if (it == request.headers.end())
+		return request.body;
 
 	std::stringstream ss;
 
@@ -51,10 +39,36 @@ std::string Server::handlePostRequest(std::string body) const
 		ss << lastUID;
 		return ss.str();
 	}
+	else if (it->second == "upload")
+	{
+		std::string filename = "upload_" + toString(time(NULL));
+		std::map<std::string, std::string>::const_iterator it = request.headers.find("Content-Disposition");
+		if (it != request.headers.end())
+		{
+			size_t pos = it->second.find("filename=\"");
+			if (pos != std::string::npos)
+			{
+				filename = it->second.substr(pos + 10);
+				filename = filename.substr(0, filename.find("\""));
+			}
+		}
+
+		std::string filepath = request.location.path + request.location.upload_dir + "/" + filename;
+		Log(Log::ALERT) << filepath << Log::endl();
+		std::ofstream outfile(filepath.c_str(), std::ios::binary);
+		if (!outfile)
+		{
+			return (generatePage(500, "Failed to open file for writing: " + filepath));
+		}
+		outfile.write(request.body.c_str(), request.body.size());
+		outfile.close();
+
+		return (generatePage(200, "File uploaded successfully to " + filepath));
+	}
 	if (it->second == "client_visits")
 	{
-		std::map<std::string, std::string>::iterator uid = data.find("UID");
-		if (uid == data.end())
+		std::map<std::string, std::string>::iterator uid = request.headers.find("UID");
+		if (uid == request.headers.end())
 			return "missing uid options";
 		
 		std::vector<Session> sessions = readSessions("./.sessions");
@@ -62,7 +76,7 @@ std::string Server::handlePostRequest(std::string body) const
 		return ss.str();
 	}
 
-	return body;
+	return request.body;
 }
 
 void Server::init(Block &block)

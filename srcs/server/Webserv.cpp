@@ -30,7 +30,7 @@ Webserv::~Webserv()
 	}
 }
 
-static const std::string	toString(const int value)
+const std::string	toString(const int value)
 {
 	std::ostringstream	oss;
 	oss << value;
@@ -51,7 +51,7 @@ static const std::string	getStatusMessage(const int code)
 	}
 }
 
-static const std::string	generatePage(const int code, const std::string &content)
+const std::string	generatePage(const int code, const std::string &content)
 {
 	return ("HTTP/1.1 " + toString(code) + " " + getStatusMessage(code) + "\r\n" + "Content-Type: text/html\r\n"
 		+ "Connection: close\r\n" + "Content-Length: " + toString(content.size()) + "\r\n\r\n" + content);
@@ -247,7 +247,7 @@ std::vector<File> getFilesInDir(const std::string path)
 	return files;
 }
 
-std::string getElt(const File& file, const std::string& path, HttpRequest& req)
+std::string getElt(const File& file, const std::string& path)
 {
 	Log(Log::WARNING) << path + " | " + file.name << Log::endl();
 	std::stringstream ss;
@@ -288,7 +288,7 @@ std::string getDirectoryListing(HttpRequest& request)
 	ss << "	<div class='elt'><p>name </p> <p> | </p> <p>size</p></div>";
 	for (size_t i = 0; i < files.size(); i++)
 	{
-		ss << getElt(files[i], getURL(request), request);
+		ss << getElt(files[i], getURL(request));
 	}
 	ss << "</body>";
 	ss << "</html>";
@@ -341,42 +341,15 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 
 const std::string	Webserv::handlePostRequest(const HttpRequest& request, const Server& server) const
 {
-	if (request.body.size() > server.client_max_body_size && server.client_max_body_size > 0)
+	if (request.body.size() > server.client_max_body_size && server.client_max_body_size > 0) //! TODO le truc empeche de faire de request post avec le server
 	{
 		Log(Log::WARNING) << "Body size exceeds client_max_body_size" << Log::endl();
 		return (getErrorPage(413, server));
 	}
-	else if (request.location.upload_dir.empty())
-	{
-		Log(Log::WARNING) << "Upload directory is not set for POST request" << Log::endl();
-		Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
-		return (generatePage(200, server.handlePostRequest(request.body)));
-	}
-	else
-	{
-		std::string filename = "upload_" + toString(time(NULL));
-		std::map<std::string, std::string>::const_iterator it = request.headers.find("Content-Disposition");
-		if (it != request.headers.end())
-		{
-			size_t pos = it->second.find("filename=\"");
-			if (pos != std::string::npos)
-			{
-				filename = it->second.substr(pos + 10);
-				filename = filename.substr(0, filename.find("\""));
-			}
-		}
+	Log(Log::WARNING) << "Upload directory is not set for POST request" << Log::endl();
+	Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
+	return (generatePage(200, server.handlePostRequest(request)));
 
-		std::string filepath = request.location.upload_dir + "/" + filename;
-		std::ofstream outfile(filepath.c_str(), std::ios::binary);
-		if (!outfile)
-		{
-			return (generatePage(500, "Failed to open file for writing: " + filepath));
-		}
-		outfile.write(request.body.c_str(), request.body.size());
-		outfile.close();
-
-		return (generatePage(200, "File uploaded successfully to " + filepath));
-	}
 }
 
 const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const

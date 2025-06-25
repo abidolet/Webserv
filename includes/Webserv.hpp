@@ -47,6 +47,16 @@ private:
 
 };
 
+struct	HttpRequest
+{
+	std::string							method;
+	std::string							body;
+	std::string							path;
+	std::map<std::string, std::string>	headers;
+	Location							location;
+	bool								method_allowed;
+};
+std::ostream& operator<<(std::ostream& stream, HttpRequest& request);
 struct Session
 {
 	size_t	uid;
@@ -79,7 +89,7 @@ struct	Server
 		listen.push_back(Listen("0.0.0.0", 8080));
 	}
 
-	std::string handlePostRequest(std::string body) const;
+	std::string handlePostRequest(HttpRequest request) const;
 	void		init(Block& block);
 	void		runSelfCheck();
 
@@ -117,17 +127,6 @@ struct File
 	long int	size;
 };
 
-struct	HttpRequest
-{
-	std::string							method;
-	std::string							body;
-	std::string							path;
-	std::map<std::string, std::string>	headers;
-	Location							location;
-	bool								method_allowed;
-};
-std::ostream& operator<<(std::ostream& stream, HttpRequest& request);
-
 class	Webserv
 {
 	private:
@@ -149,5 +148,8 @@ class	Webserv
 
 		void	run();
 };
+
+const std::string	toString(const int value);
+const std::string	generatePage(const int code, const std::string &content);
 
 #endif
