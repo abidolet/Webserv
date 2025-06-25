@@ -371,7 +371,7 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 	if (remove(path.c_str()) == 0)
 	{
 		Log(Log::SUCCESS) << "File deleted !" << path << Log::endl();
-		return (generatePage(200, "File deleted successfully"));
+		return (generatePage(200, "File deleted successfully\n"));
 	}
 	else
 	{
