@@ -202,7 +202,12 @@ namespace Utils
 	{
 		Log(Log::DEBUG) << "[server config]:" << Log::endl();
 		Log(Log::DEBUG) << "\t|-> root:" << serv.root << Log::endl();
-		Log(Log::DEBUG) << "\t|-> server_name:" << serv.server_name << Log::endl();
+		Log(Log::DEBUG) << "\t|->" << serv.server_names.size() << "server_names" << Log::endl();
+		std::vector<std::string>::iterator it = serv.server_names.begin();
+		for ( ; it != serv.server_names.end(); ++it)
+		{
+			Log(Log::DEBUG) << "\t|\t|->" << *it << Log::endl();
+		}
 		Log(Log::DEBUG) << "\t|-> client_max_body_size:" << serv.client_max_body_size << Log::endl();
 		Log(Log::DEBUG) << "\t|-> allowed methods:" << Utils::strUnite(serv.allowed_methods, ",") << Log::endl();
 

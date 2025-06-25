@@ -50,12 +50,6 @@ std::string Parser::joinPath(Server& serv, const std::string &path, std::string 
 	}
 	return to_add + path;
 }
-//server {()
-// }
-
-
-// server } (au mid de deux serv)
-//
 
 Block Parser::loadBlock(std::vector<std::string>::iterator& it, const std::string &_name)
 {

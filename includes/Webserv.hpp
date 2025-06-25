@@ -84,8 +84,9 @@ size_t find(std::vector<Listen> vec, Listen toFind);
 struct	Server
 {
 	Server()
-		: root("/"), server_name("localhost"), client_max_body_size(0)
+		: root("/"), client_max_body_size(0)
 	{
+		server_names.push_back("localhost");
 		listen.push_back(Listen("0.0.0.0", 8080));
 	}
 
@@ -100,7 +101,7 @@ struct	Server
 	static void	registerSession(const uint uid);
 
 	std::string					root;
-	std::string					server_name;
+	std::vector<std::string>	server_names;
 	size_t						client_max_body_size;
 
 	std::vector<std::string>	allowed_methods;

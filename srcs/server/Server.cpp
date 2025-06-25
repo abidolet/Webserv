@@ -81,7 +81,16 @@ std::string Server::handlePostRequest(HttpRequest request) const
 
 void Server::init(Block &block)
 {
-	block.loadSingleDirective("server_name", server_name);
+	server_names = block.loadDirectives("server_name");
+	for (size_t i = 0; i < server_names.size(); i++)
+	{
+		for (int j = i - 1; j >= 0; j--)
+		{
+			if (server_names[j] == server_names[i])
+				throw std::runtime_error("cannot have duplicate server name; `" + server_names[i] + "'");
+		}
+	}
+
 	block.loadSingleDirective("root", root);
 	setupListen(block);
 	setupMaxBodySize(block);
