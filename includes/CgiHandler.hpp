@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.hpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
+/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/26 17:31:19 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/26 18:17:29 by mjuncker         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,6 +85,7 @@ enum
 	SERVER_ADDR,
 	SCRIPT_FILENAME,
 	REDIRECT_STATUS,
+	HTTP_COOKIE,
 	GATEWAY_INTERFACE,
 	ENV_LAST_ELEM = GATEWAY_INTERFACE
 };
@@ -98,7 +99,7 @@ enum
 	INFO_LAST_ELEM = EXECUTED
 };
 
-#define ENV_SIZE				ENV_LAST_ELEM + 1
+#define ENV_SIZE				ENV_LAST_ELEM + 2
 #define	INFO_SIZE				INFO_LAST_ELEM + 1
 
 const std::string	baseEnv[ENV_SIZE] = {	"REQUEST_METHOD=",
@@ -123,6 +124,7 @@ const std::string	baseEnv[ENV_SIZE] = {	"REQUEST_METHOD=",
 											"SERVER_ADDR=",
 											"SCRIPT_FILENAME=",
 											"REDIRECT_STATUS=",
+											"HTTP_COOKIE=",
 											"GATEWAY_INTERFACE="};
 
 const bool			baseInfos[INFO_SIZE] = {false, false, false, false};
@@ -172,7 +174,7 @@ private:
 	int			fd;
 
 	void		createPipes();
-	void		constructEnv();
+	void		constructEnv(HttpRequest request);
 	void		closePipes();
 	void		childProcess();
 	std::string	father();

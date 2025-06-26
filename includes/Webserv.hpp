@@ -17,6 +17,8 @@
 # define THROW(msg) throw std::runtime_error(msg + static_cast<std::string>(strerror(errno)));
 # define ERROR(msg) Log(Log::ERROR) << msg << strerror(errno) << Log::endl();
 
+struct	HttpRequest;
+
 struct 	Location
 {
 	Location()
@@ -47,16 +49,6 @@ private:
 
 };
 
-struct	HttpRequest
-{
-	std::string							method;
-	std::string							body;
-	std::string							path;
-	std::map<std::string, std::string>	headers;
-	Location							location;
-	bool								method_allowed;
-};
-std::ostream& operator<<(std::ostream& stream, HttpRequest& request);
 struct Session
 {
 	size_t	uid;
@@ -96,6 +88,7 @@ struct	Server
 
 	void		cookiesAssert();
 	std::string	getCookies() const;
+	std::string	getCookiesCgi() const;
 
 	Location*	searchLocationByName(const std::string &name);
 	static void	registerSession(const uint uid);
@@ -121,6 +114,18 @@ private:
 	void	setupListen(Block &block);
 
 };
+
+struct	HttpRequest
+{
+	std::string							method;
+	std::string							body;
+	std::string							path;
+	std::map<std::string, std::string>	headers;
+	Location							location;
+	Server								server;
+	bool								method_allowed;
+};
+std::ostream& operator<<(std::ostream& stream, HttpRequest& request);
 
 struct File
 {

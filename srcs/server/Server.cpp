@@ -145,6 +145,11 @@ std::string Server::getCookies() const
 	return cookies;
 }
 
+std::string Server::getCookiesCgi() const
+{
+	return Utils::strUnite(cookies, ";");
+}
+
 
 void Server::runSelfCheck()
 {

@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-import cgi
-import cgitb; cgitb.enable()  # Enable debugging (remove in production)
+import os
+print("Content-Type: text/plain\n")
+cookies_var = os.environ.get("HTTP_COOKIE")
 
-print("Content-Type: text/html")  # HTTP header
-print()  # Blank line to separate headers from body
-print("<html>")
-print("<head><title>Hello World - First CGI Program</title></head>")
-print("<body>")
-print("<h2>Hello World! This is my first CGI program</h2>")
-print("</body>")
-print("</html>")
+cookies = cookies_var.split(";")
+
+print(f"found {len(cookies)} cookies")
+for cookie in cookies:
+	elt = cookie.split("=")
+	print(f"cookie name: {elt[0]} => {elt[1]}")

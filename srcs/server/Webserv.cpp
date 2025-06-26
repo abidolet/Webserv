@@ -164,6 +164,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 		}
 	}
 
+	request.server = server;
 	if (best_match)
 	{
 		Log(Log::DEBUG) << "Best location match:" << best_match->root << "with path:" << best_match->path << Log::endl();

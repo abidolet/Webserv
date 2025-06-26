@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
+/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/26 17:31:30 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/26 18:16:27 by mjuncker         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,7 +89,7 @@ void	CgiHandler::createPipes()
 	this->info[PIPES_OPENED] = true;
 }
 
-void	CgiHandler::constructEnv()
+void	CgiHandler::constructEnv(HttpRequest request)
 {
 	if (contentLength.length() > 1)
 	{
@@ -109,6 +109,7 @@ void	CgiHandler::constructEnv()
 	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
 
 	this->envConstruct[PATH_INFO].append("/");
+	this->envConstruct[HTTP_COOKIE].append(request.server.getCookiesCgi());
 
 	for (int i = 0; i < ENV_SIZE; ++i)
 		this->env[i] = const_cast<char*>(this->envConstruct[i].c_str());
@@ -191,7 +192,7 @@ bool	CgiHandler::cgiRequest(HttpRequest request, std::vector<Location> locations
 		{
 			this->cgi = it->cgi_pass;
 			this->script = request.path;
-			this->constructEnv();
+			this->constructEnv(request);
 			this->createPipes();
 			return true;
 		}
