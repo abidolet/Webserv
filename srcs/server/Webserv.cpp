@@ -153,7 +153,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 		if (request.path == loc.root
 			|| (request.path.compare(0, loc.root.length(), loc.root) == 0
-			&& (loc.root.back() == '/'
+			&& (loc.root[loc.root.length() - 1] == '/'
 				|| request.path[loc.root.length()] == '/'
 				|| request.path[loc.root.length()] == '\0')))
 		{
