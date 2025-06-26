@@ -149,17 +149,21 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	for (size_t	i = 0; i < server.locations.size(); ++i)
 	{
 		const Location&	loc = server.locations[i];
-		Log(Log::DEBUG) << "Checking location" << i << ":" << loc.root << Log::endl();
+		Log(Log::DEBUG) << "Checking location " << i << ": " << loc.root << Log::endl();
 
-		if (request.path.compare(0, loc.root.length(), loc.root) == 0)
+		if (request.path == loc.root
+			|| (request.path.compare(0, loc.root.length(), loc.root) == 0
+			&& (loc.root.back() == '/'
+				|| request.path[loc.root.length()] == '/'
+				|| request.path[loc.root.length()] == '\0')))
 		{
-			Log(Log::DEBUG) << "Potential match found:" << loc.root << "(length:" << loc.root.length() << ")" << Log::endl();
+			Log(Log::DEBUG) << "Valid match found: " << loc.root << Log::endl();
 
 			if (loc.root.length() > best_match_length)
 			{
 				best_match = &loc;
 				best_match_length = loc.root.length();
-				Log(Log::DEBUG) << "New best match:" << best_match->root << Log::endl();
+				Log(Log::DEBUG) << "New best match: " << best_match->root << Log::endl();
 			}
 		}
 	}
@@ -638,10 +642,8 @@ void Webserv::run()
 				}
 				else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
 				{
-					// if (!httpReq.headers["Content-Length"].empty())
-					// {
-					// 	cgi.addBody(fd);
-					// }
+					if (!httpReq.headers["Content-Length"].empty())
+						cgi.sendFd(fd);
 					Log(Log::LOG) << "launching cgi" << Log::endl();
 					response = cgi.launch();
 				}

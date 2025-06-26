@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/17 13:38:48 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/26 17:31:19 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/socket.h>
 
 #include "Webserv.hpp"
 #include "Log.hpp"
@@ -29,7 +30,6 @@
 #define	DEFAULT_SERVER_ROOT		"/home/ygille/42/www/"
 
 #define HTTP_OK					"HTTP/1.1 200 OK\n"
-#define HTTP_500				"HTTP/1.1 500 INTERNAL SERVER ERROR\n"
 
 /*	example URL
 	http://example.com/cgi-bin/script.cgi/extra/path/file.txt?key=value&foo=bar
@@ -143,7 +143,8 @@ public:
 	CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength);
 	~CgiHandler();
 
-	void		addBody(const std::string& body);
+	void		sendFd(int fd);
+	
 	std::string	launch();
 
 	bool		cgiRequest(HttpRequest request, std::vector<Location> locations);
@@ -168,12 +169,14 @@ private:
 	t_pipes		pipes;
 
 	int			pid;
+	int			fd;
 
 	void		createPipes();
 	void		constructEnv();
 	void		closePipes();
 	void		childProcess();
 	std::string	father();
+	void		addBody();
 
 	CgiHandler(const CgiHandler& other);
 	CgiHandler& operator=(const CgiHandler& other);
