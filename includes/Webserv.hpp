@@ -82,7 +82,7 @@ struct	Server
 		listen.push_back(Listen("0.0.0.0", 8080));
 	}
 
-	std::string handlePostRequest(HttpRequest request) const;
+	std::string handlePostRequest(HttpRequest request, const Server& server) const;
 	void		init(Block& block);
 	void		runSelfCheck();
 
@@ -133,6 +133,8 @@ struct File
 	long int	size;
 };
 
+const std::string	getErrorPage(const int error_code, const Server& server);
+
 class	Webserv
 {
 	private:
@@ -146,13 +148,12 @@ class	Webserv
 		const std::string	handlePostRequest(const HttpRequest& request, const Server& server) const;
 		const std::string	handleDeleteRequest(const std::string& path, const Server& server) const;
 
-		const std::string	getErrorPage(const int error_code, const Server& server) const;
-		const std::string	getUrlPage(const int error_code, const std::string &content, const std::string &location) const;
 	public:
 		Webserv(const std::string& file);
 		~Webserv();
 
 		void	run();
+		void	init_servers();
 };
 
 const std::string	toString(const int value);

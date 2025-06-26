@@ -44,12 +44,15 @@ static const std::string	getStatusMessage(const int code)
 		case 200:	return ("OK");
 		case 201:	return ("Created");
 		case 301:	return ("Moved Permanently");
+		case 400:	return ("Bad Request");
 		case 403:	return ("Forbidden");
 		case 404:	return ("Not Found");
 		case 405:	return ("Method Not Allowed");
+		case 409:	return ("Conflict");
 		case 413:	return ("Payload Too Large");
 		case 500:	return ("Internal Server Error");
-		default:	return ("Unknown code");
+		case 501:	return ("Not Implemented");
+		default:	return ("Unknown status");
 	}
 }
 
@@ -59,7 +62,7 @@ const std::string	generatePage(const int code, const std::string &content)
 		+ "Connection: close\r\n" + "Content-Length: " + toString(content.length() + 2) + "\r\n\r\n" + content + "\r\n");
 }
 
-const std::string	Webserv::getUrlPage(const int code, const std::string &content, const std::string &location) const
+static const std::string	getUrlPage(const int code, const std::string &location)
 {
 	std::ostringstream	response;
 	response << "HTTP/1.1 " << code << " " << getStatusMessage(code) << "\r\n";
@@ -69,13 +72,15 @@ const std::string	Webserv::getUrlPage(const int code, const std::string &content
 		response << "Location: " << location << "\r\n";
 	}
 
+	const std::string	content = "<html><body><h1>Redirecting...</h1></body></html>\r\n";
+
 	response << "Content-Type: text/html\r\n" << "Connection: close\r\n"
 		<< "Content-Length: " << content.length() << "\r\n\r\n" << content;
 
 	return (response.str());
 }
 
-const std::string	Webserv::getErrorPage(const int error_code, const Server& server) const
+const std::string	getErrorPage(const int error_code, const Server& server)
 {
 	Log(Log::DEBUG) << "Searching custom error page for code" << error_code << Log::endl();
 
@@ -345,17 +350,142 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 	return (page);
 }
 
+std::vector<Session> readSessions(const std::string& sessionFilepath);
+
 const std::string	Webserv::handlePostRequest(const HttpRequest& request, const Server& server) const
 {
-	if (request.body.size() > server.client_max_body_size && server.client_max_body_size > 0) //! TODO le truc empeche de faire de request post avec le server
+	if (request.body.size() > server.client_max_body_size && server.client_max_body_size > 0)
 	{
 		Log(Log::WARNING) << "Body size exceeds client_max_body_size" << Log::endl();
 		return (getErrorPage(413, server));
 	}
-	Log(Log::WARNING) << "Upload directory is not set for POST request" << Log::endl();
-	Log(Log::SUCCESS) << "Post request answered !" << Log::endl();
-	return (generatePage(200, server.handlePostRequest(request)));
 
+	std::map<std::string, std::string>::const_iterator	it = request.headers.find("Content-Type");
+	if (it == request.headers.end())
+	{
+		return (getErrorPage(400, server));
+	}
+
+	std::stringstream ss;
+	if (it->second == "client_credentials")
+	{
+		ss << server.lastUID;
+		return ss.str();
+	}
+	else if (it->second == "upload")
+	{
+		std::string	filename = "upload_" + toString(time(NULL));
+		std::map<std::string, std::string>::const_iterator	it = request.headers.find("Content-Disposition");
+		if (it != request.headers.end())
+		{
+			size_t pos = it->second.find("filename=\"");
+			if (pos != std::string::npos)
+			{
+				filename = it->second.substr(pos + 10);
+				filename = filename.substr(0, filename.find("\""));
+
+				for (size_t	i = 0; i < filename.size(); ++i)
+				{
+					if (filename[i] == '/' || filename[i] == '\\' || filename[i] == ':')
+					{
+						filename[i] = '_';
+					}
+				}
+			}
+		}
+
+		std::string	filepath = request.location.path + request.location.upload_dir + "/" + filename;
+
+		struct stat	statbuf;
+		if (stat(filepath.c_str(), &statbuf) == 0)
+		{
+			return (getErrorPage(409, server));
+		}
+
+		std::ofstream	outfile(filepath.c_str(), std::ios::binary);
+		if (!outfile)
+		{
+			return (generatePage(500, "Failed to create file: " + filepath));
+		}
+
+		outfile.write(request.body.data(), request.body.size());
+		outfile.close();
+
+		return (generatePage(201, "File saved as " + filename));
+	}
+	if (it->second == "client_visits")
+	{
+		std::map<std::string, std::string>::const_iterator uid = request.headers.find("UID");
+		if (uid == request.headers.end())
+			return "missing uid options";
+
+		std::vector<Session> sessions = readSessions("./.sessions");
+		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
+		return ss.str();
+	}
+
+	return (generatePage(200, request.body));
+}
+
+std::string Server::handlePostRequest(HttpRequest request, const Server& server) const
+{
+	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Type");
+	if (it == request.headers.end())
+	{
+		return (getErrorPage(400, server));
+	}
+
+	std::stringstream ss;
+	if (it->second == "client_credentials")
+	{
+		ss << lastUID;
+		return ss.str();
+	}
+	else if (it->second == "upload")
+	{
+		std::string	filename = "upload_" + toString(time(NULL));
+		std::map<std::string, std::string>::const_iterator	it = request.headers.find("Content-Disposition");
+		if (it != request.headers.end())
+		{
+			size_t pos = it->second.find("filename=\"");
+			if (pos != std::string::npos)
+			{
+				filename = it->second.substr(pos + 10);
+				filename = filename.substr(0, filename.find("\""));
+			}
+		}
+
+		std::string	filepath = request.location.path + request.location.upload_dir + "/" + filename;
+
+		struct stat	statbuf;
+		if (stat(filepath.c_str(), &statbuf) == 0)
+		{
+			return (getErrorPage(409, server));
+		}
+
+		std::ofstream	outfile(filepath.c_str(), std::ios::binary);
+		if (!outfile)
+		{
+			return (generatePage(500, "Failed to create file: " + filepath));
+		}
+
+		outfile.write(request.body.data(), request.body.size());
+		outfile.close();
+
+		return (generatePage(201, "File saved as " + filename));
+	}
+	if (it->second == "client_visits")
+	{
+		std::map<std::string, std::string>::iterator uid = request.headers.find("UID");
+		if (uid == request.headers.end())
+			return "missing uid options";
+
+		std::vector<Session> sessions = readSessions("./.sessions");
+		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
+		return ss.str();
+	}
+
+	return request.body;
 }
 
 const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const
@@ -422,17 +552,9 @@ uint32_t	strToAddr(const std::string& str)
 	return ((a << 24) | (b << 16) | (c << 8) | d);
 }
 
-void Webserv::run()
+void	Webserv::init_servers()
 {
-	Log() << "Running web server..." << Log::endl();
-
-	_epoll_fd = epoll_create(EPOLL_CLOEXEC);
-	if (_epoll_fd == -1)
-	{
-		THROW("Failed to create epoll instance: ");
-	}
-
-	for (size_t i = 0; i < _servers.size(); ++i)
+	for (size_t	i = 0; i < _servers.size(); ++i)
 	{
 		Log(Log::DEBUG) << "Initializing server" << i << Log::endl();
 
@@ -501,6 +623,17 @@ void Webserv::run()
 				THROW("epoll_ctl failed: ");
 			}
 		}
+	}
+}
+
+void	Webserv::run()
+{
+	Log() << "Running web server..." << Log::endl();
+
+	_epoll_fd = epoll_create(EPOLL_CLOEXEC);
+	if (_epoll_fd == -1)
+	{
+		THROW("Failed to create epoll instance: ");
 	}
 
 	struct epoll_event	events[MAX_EVENTS];
@@ -634,8 +767,7 @@ void Webserv::run()
 
 				if (!httpReq.location.redirection.second.empty())
 				{
-					response = getUrlPage(httpReq.location.redirection.first,
-						"<html><body><h1>Redirecting...</h1></body></html>\r\n", httpReq.location.redirection.second);
+					response = getUrlPage(httpReq.location.redirection.first, httpReq.location.redirection.second);
 				}
 				else if (!httpReq.method_allowed)
 				{
@@ -660,6 +792,10 @@ void Webserv::run()
 				{
 					response = handleDeleteRequest(httpReq.path, *server);
 				}
+				else
+				{
+					response = getErrorPage(501, *server);
+				}
 
 				if (send(fd, response.c_str(), response.size(), 0) == -1)
 				{
@@ -681,6 +817,6 @@ std::ostream& operator<<(std::ostream& stream, HttpRequest& request)
 		stream << it->first << " | " << it->second << std::endl;
 	}
 
-	return stream;
+	return (stream);
 }
 

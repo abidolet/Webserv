@@ -8,8 +8,8 @@ void assertLocation(const Location& location, const Block& block)
 	if (location.path[0] != '/')
 		throw std::runtime_error("`path' directive must be an absolute path");
 
-	if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
-		throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
+	// if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
+	// 	throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
 
 	//? check that cgi_extension and cgi_pass are BOTH empty or filled
 	if (!location.cgi_extension.empty() != !location.cgi_pass.empty())

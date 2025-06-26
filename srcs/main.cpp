@@ -4,7 +4,7 @@
 #include <csignal>
 #include <cstdlib>
 
-std::string	get_sig_name(int signal)
+static const std::string	get_sig_name(const int signal)
 {
 	switch (signal)
 	{
@@ -15,7 +15,7 @@ std::string	get_sig_name(int signal)
 	}
 }
 
-void	handle_signal(int signal)
+static void	handle_signal(const int signal)
 {
 	std::cout << std::endl;
 	Log() << "Process terminating with default action of signal"
@@ -29,11 +29,11 @@ int main (int argc, char *argv[])
 	signal(SIGQUIT, handle_signal);
 	signal(SIGTERM, handle_signal);
 
-	std::string	file;
+	#if ENABLE_LOG_FILE
+		Log::setupLogFile();
+	#endif
 
-#if ENABLE_LOG_FILE
-	Log::setupLogFile();
-#endif
+	std::string	file;
 
 	if (argc == 1)
 	{
