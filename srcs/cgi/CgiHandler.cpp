@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/26 15:14:10 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/26 15:36:30 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,11 +89,13 @@ void	CgiHandler::constructEnv()
 	this->envConstruct[SCRIPT_FILENAME].append(this->script);
 	this->envConstruct[SCRIPT_NAME].append(this->script);
 
+	this->envConstruct[REQUEST_URI].append(this->script);
+
 	this->path.append(this->script);
 
 	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
 
-	this->envConstruct[PATH_INFO].append("\"\"");
+	this->envConstruct[PATH_INFO].append("/");
 
 	for (int i = 0; i < ENV_SIZE; ++i)
 		this->env[i] = const_cast<char*>(this->envConstruct[i].c_str());
