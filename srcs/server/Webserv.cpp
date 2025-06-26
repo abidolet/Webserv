@@ -637,18 +637,7 @@ void Webserv::run()
 				else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
 				{
 					if (!httpReq.headers["Content-Length"].empty())
-					{
-						char		buffer[4096];
-						ssize_t		bytes_read;
-						std::string	request;
-
-						while ((bytes_read = recv(fd, buffer, sizeof(buffer), 0)) > 0)
-						{
-							request.append(buffer, bytes_read);
-						}
-
-						cgi.addBody(request);
-					}
+						cgi.sendFd(fd);
 					Log(Log::LOG) << "launching cgi" << Log::endl();
 					response = cgi.launch();
 				}

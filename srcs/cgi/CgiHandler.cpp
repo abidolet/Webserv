@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/26 15:36:30 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/26 17:31:30 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 
 /* Canonical Form */
 CgiHandler::CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength)
-: method(method), contentType(contentType), contentLength(contentLength)
+: method(method), contentType(contentType), contentLength(contentLength), fd(0)
 {
 	for (int i = 0; i < ENV_SIZE; ++i)
 		this->envConstruct[i] = baseEnv[i];
@@ -32,9 +32,17 @@ CgiHandler::~CgiHandler()
 }
 /* End-Of Canonical Form */
 
-void		CgiHandler::addBody(const std::string& body)
+void		CgiHandler::addBody()
 {
-	write (this->pipes.to_cgi[INPUT], body.c_str(), body.length());
+	char		buffer[4096];
+	ssize_t		bytes_read;
+
+	while ((bytes_read = recv(this->fd, buffer, sizeof(buffer), 0)) > 0)
+	{
+		std::cout << "Writing " << buffer << std::endl;
+		write (this->pipes.to_cgi[INPUT], buffer, bytes_read);
+	}
+	std::cout << "Done receiving file" << std::endl;
 	this->info[BODY_SENT] = true;
 }
 
@@ -50,8 +58,8 @@ std::string	CgiHandler::launch()
 		Log(Log::ERROR) << "Pipes not opened, can't executed" << Log::endl();
 		return NULL;
 	}
-	if (this->info[AS_BODY] && !this->info[BODY_SENT])
-		Log(Log::ERROR) << "This request need body before executing" << Log::endl();
+	if (this->info[AS_BODY] && !this->fd)
+		Log(Log::ERROR) << "This request need body" << Log::endl();
 
 	Log(Log::LOG) << this->cgi << Log::endl();
 	this->pid = fork();
@@ -63,7 +71,12 @@ std::string	CgiHandler::launch()
 	}
 	if (pid == 0)
 		this->childProcess();
-	return this->father();
+	else
+	{
+		this->addBody();
+		return this->father();
+	}
+	return generatePage(500, "CGI FAILED");
 }
 
 void	CgiHandler::createPipes()
@@ -157,10 +170,10 @@ std::string	CgiHandler::father()
 	if (WIFEXITED(status))
 	{
         if (WEXITSTATUS(status) != 0)
-            return HTTP_500;
+            return generatePage(500, "CGI FAILED");
     }
 	else
-    	return HTTP_500;
+    	return generatePage(500, "CGI FAILED");
 	return cgi_output;
 }
 
@@ -184,4 +197,9 @@ bool	CgiHandler::cgiRequest(HttpRequest request, std::vector<Location> locations
 		}
 	}
 	return false;
+}
+
+void	CgiHandler::sendFd(int fd)
+{
+	this->fd = fd;
 }
