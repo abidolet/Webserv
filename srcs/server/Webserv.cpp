@@ -188,16 +188,18 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 		std::string	full_path = best_match->path;
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
-		full_path += '/' + request.path;
+		full_path += '/' + Utils::strtrim(request.path, "/");
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
+		Log(Log::DEBUG) << "Trimming" << full_path << Log::endl();
+		full_path = '/' + Utils::strtrim(full_path, "/");
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
 		struct stat	statbuf;
 		if (stat(full_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode) && !best_match->directoryListing)
 		{
 			std::string	index = best_match->index;
 			Log(Log::DEBUG) << "Path is a directory adding index:" << index << Log::endl();
-			full_path += best_match->index;
+			full_path += '/' + best_match->index;
 			Log(Log::DEBUG) << "Added index file:" << full_path << Log::endl();
 		}
 
@@ -636,19 +638,10 @@ void Webserv::run()
 				}
 				else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
 				{
-					if (!httpReq.headers["Content-Length"].empty())
-					{
-						char		buffer[4096];
-						ssize_t		bytes_read;
-						std::string	request;
-
-						while ((bytes_read = recv(fd, buffer, sizeof(buffer), 0)) > 0)
-						{
-							request.append(buffer, bytes_read);
-						}
-
-						cgi.addBody(request);
-					}
+					// if (!httpReq.headers["Content-Length"].empty())
+					// {
+					// 	cgi.addBody(fd);
+					// }
 					Log(Log::LOG) << "launching cgi" << Log::endl();
 					response = cgi.launch();
 				}
