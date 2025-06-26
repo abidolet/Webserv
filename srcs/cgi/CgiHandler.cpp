@@ -5,10 +5,11 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/26 18:16:27 by mjuncker         ###   ########.fr       */
+/*   Created: Invalid Date        by              +#+  #+#    #+#             */
+/*   Updated: 2025/06/26 18:24:03 by mjuncker         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 
 #include "CgiHandler.hpp"
 
@@ -39,10 +40,10 @@ void		CgiHandler::addBody()
 
 	while ((bytes_read = recv(this->fd, buffer, sizeof(buffer), 0)) > 0)
 	{
-		std::cout << "Writing " << buffer << std::endl;
+		Log(Log::DEBUG) << "Writing" << Log::endl();
 		write (this->pipes.to_cgi[INPUT], buffer, bytes_read);
 	}
-	std::cout << "Done receiving file" << std::endl;
+	Log(Log::DEBUG) << "Done receiving file" << Log::endl();
 	this->info[BODY_SENT] = true;
 }
 

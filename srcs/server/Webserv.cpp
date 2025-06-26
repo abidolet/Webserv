@@ -149,17 +149,21 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	for (size_t	i = 0; i < server.locations.size(); ++i)
 	{
 		const Location&	loc = server.locations[i];
-		Log(Log::DEBUG) << "Checking location" << i << ":" << loc.root << Log::endl();
+		Log(Log::DEBUG) << "Checking location " << i << ": " << loc.root << Log::endl();
 
-		if (request.path.compare(0, loc.root.length(), loc.root) == 0)
+		if (request.path == loc.root
+			|| (request.path.compare(0, loc.root.length(), loc.root) == 0
+			&& (loc.root[loc.root.length() - 1] == '/'
+				|| request.path[loc.root.length()] == '/'
+				|| request.path[loc.root.length()] == '\0')))
 		{
-			Log(Log::DEBUG) << "Potential match found:" << loc.root << "(length:" << loc.root.length() << ")" << Log::endl();
+			Log(Log::DEBUG) << "Valid match found: " << loc.root << Log::endl();
 
 			if (loc.root.length() > best_match_length)
 			{
 				best_match = &loc;
 				best_match_length = loc.root.length();
-				Log(Log::DEBUG) << "New best match:" << best_match->root << Log::endl();
+				Log(Log::DEBUG) << "New best match: " << best_match->root << Log::endl();
 			}
 		}
 	}
@@ -189,16 +193,18 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 
 		std::string	full_path = best_match->path;
 		Log(Log::DEBUG) << "Constructing full path from location path:" << full_path << Log::endl();
-		full_path += '/' + request.path;
+		full_path += '/' + Utils::strtrim(request.path, "/");
 		Log(Log::DEBUG) << "Full path constructed:" << full_path << Log::endl();
 
+		Log(Log::DEBUG) << "Trimming" << full_path << Log::endl();
+		full_path = '/' + Utils::strtrim(full_path, "/");
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
 		struct stat	statbuf;
 		if (stat(full_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode) && !best_match->directoryListing)
 		{
 			std::string	index = best_match->index;
 			Log(Log::DEBUG) << "Path is a directory adding index:" << index << Log::endl();
-			full_path += best_match->index;
+			full_path += '/' + best_match->index;
 			Log(Log::DEBUG) << "Added index file:" << full_path << Log::endl();
 		}
 
