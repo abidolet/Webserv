@@ -121,13 +121,13 @@ void Server::cookiesAssert()
 std::string Server::getCookies() const
 {
 	const std::string declaration = "Set-Cookie: ";
-	std::string cookies;
+	std::string cookies_str;
 
 	for (size_t i = 0; i < cookies.size(); i++)
 	{
-		cookies += declaration;
-		cookies += cookies[i];
-		cookies += "\r\n";
+		cookies_str += declaration;
+		cookies_str += cookies[i];
+		cookies_str += "\r\n";
 	}
 	//TODO: need to add the session uid as a cookie
 	std::vector<Session> sessions = readSessions("./.sessions");
@@ -137,12 +137,12 @@ std::string Server::getCookies() const
 	{
 		std::stringstream ss;
 		ss << session->uid;
-		cookies += declaration;
-		cookies += "session_uid=" + ss.str();
-		cookies += "\r\n";
+		cookies_str += declaration;
+		cookies_str += "session_uid=" + ss.str();
+		cookies_str += "\r\n";
 	}
 
-	return cookies;
+	return cookies_str;
 }
 
 std::string Server::getCookiesCgi() const
