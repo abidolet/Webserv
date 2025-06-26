@@ -131,7 +131,6 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 			}
 
 			request.headers[key] = value;
-			Log(Log::DEBUG) << "Header parsed:" << key << "=" << value << Log::endl();
 		}
 	}
 
@@ -355,6 +354,23 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const
 {
 	Log() << "Delete request for: " << path << Log::endl();
+
+	std::string	tmp = path;
+	while (!tmp.empty())
+	{
+		if (access(tmp.c_str(), W_OK) != 0)
+		{
+			struct stat	statbuf;
+			if (stat(path.c_str(), &statbuf) != 0)
+			{
+				Log(Log::WARNING) << "File not found:" << path << "'" << Log::endl();
+				return (getErrorPage(404, server));
+			}
+			Log(Log::ERROR) << "Cannot delete" << path << "missing permission for:" << tmp << Log::endl();
+			return (getErrorPage(403, server));
+		}
+		tmp = tmp.substr(0, tmp.find_last_of('/'));
+	}
 
 	struct stat	statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
@@ -605,7 +621,7 @@ void Webserv::run()
 
 				httpReq = parseRequest(request, *server);
 				std::string	response = "";
-				CgiHandler	cgi(httpReq.method, "text/html", ""); //Need ContentType and ContentLength (if apply)
+				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"]); //Need ContentType and ContentLength (if apply)
 
 				Server::registerSession(addr.sin_addr.s_addr);
 
