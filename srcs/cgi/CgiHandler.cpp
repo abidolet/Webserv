@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abidolet <abidolet@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:35 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/22 23:36:52 by abidolet         ###   ########.fr       */
+/*   Updated: 2025/06/26 15:36:30 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,14 +86,16 @@ void	CgiHandler::constructEnv()
 	}
 
 	this->envConstruct[REQUEST_METHOD].append(this->method);
-	// this->envConstruct[SCRIPT_FILENAME].append(DEFAULT_SERVER_ROOT);
 	this->envConstruct[SCRIPT_FILENAME].append(this->script);
 	this->envConstruct[SCRIPT_NAME].append(this->script);
 
-	// this->path.append(DEFAULT_SERVER_ROOT);
+	this->envConstruct[REQUEST_URI].append(this->script);
+
 	this->path.append(this->script);
 
 	this->envConstruct[SERVER_PROTOCOL].append(DEFAULT_SERVER_PROTOCOL);
+
+	this->envConstruct[PATH_INFO].append("/");
 
 	for (int i = 0; i < ENV_SIZE; ++i)
 		this->env[i] = const_cast<char*>(this->envConstruct[i].c_str());
@@ -150,6 +152,7 @@ std::string	CgiHandler::father()
 	this->info[EXECUTED] = true;
 
     waitpid(pid, &status, 0);
+	Log(Log::LOG) << "CGI Executed" << Log::endl();
 
 	if (WIFEXITED(status))
 	{
