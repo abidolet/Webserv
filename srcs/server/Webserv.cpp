@@ -369,7 +369,7 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 			Log(Log::ERROR) << "Cannot delete" << path << "missing permission for:" << tmp << Log::endl();
 			return (getErrorPage(403, server));
 		}
-		tmp = tmp.substr(0, tmp.find_last_of('/'));
+		tmp = tmp.erase(tmp.find_last_of('/'));
 	}
 
 	struct stat	statbuf;
@@ -621,7 +621,7 @@ void Webserv::run()
 
 				httpReq = parseRequest(request, *server);
 				std::string	response = "";
-				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"]); //Need ContentType and ContentLength (if apply)
+				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"]);
 
 				Server::registerSession(addr.sin_addr.s_addr);
 
