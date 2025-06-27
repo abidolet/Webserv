@@ -6,8 +6,8 @@
 # include <map>
 
 # include "Block.hpp"
-
-#include "CgiHandler.hpp"
+# include "Log.hpp"
+# include <unistd.h>
 
 #ifndef RUN_SERV_SELF_CHECK
 # define RUN_SERV_SELF_CHECK 1
