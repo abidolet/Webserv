@@ -581,7 +581,7 @@ void	Webserv::init_servers()
 			int	ret = getaddrinfo(it->addr.c_str(), NULL, &hints, &res);
 			if (ret != 0)
 			{
-				THROW("getaddrinfo failed: " + ret);
+				THROW_GAI("getaddrinfo failed: ", ret);
 			}
 
 			if (res)
@@ -592,7 +592,7 @@ void	Webserv::init_servers()
 			}
 			else
 			{
-				THROW("getaddrinfo returned no results: " + ret);
+				THROW_GAI("getaddrinfo returned no results: ", ret);
 			}
 
 			server_addr.sin_port = htons(it->port);
