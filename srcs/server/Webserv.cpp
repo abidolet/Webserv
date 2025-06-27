@@ -636,6 +636,8 @@ void	Webserv::run()
 		THROW("Failed to create epoll instance: ");
 	}
 
+	init_servers();
+
 	struct epoll_event	events[MAX_EVENTS];
 
 	while (true)
