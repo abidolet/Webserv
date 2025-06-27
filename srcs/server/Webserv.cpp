@@ -757,7 +757,7 @@ void	Webserv::run()
 
 				httpReq = parseRequest(request, *server);
 				std::string	response = "";
-				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"]);
+				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"], *server);
 
 				Server::registerSession(addr.sin_addr.s_addr);
 
