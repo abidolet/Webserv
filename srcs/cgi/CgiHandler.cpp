@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/06/26 18:24:03 by mjuncker         ###   ########.fr       */
+/*   Created: Invalid date        by                   #+#    #+#             */
+/*   Updated: 2025/06/27 11:18:57 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,18 +14,14 @@
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength)
-: method(method), contentType(contentType), contentLength(contentLength), fd(0)
+CgiHandler::CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength, const Server& server)
+: server(server), method(method), contentType(contentType), contentLength(contentLength), fd(0)
 {
 	for (int i = 0; i < ENV_SIZE; ++i)
 		this->envConstruct[i] = baseEnv[i];
 	for (int i = 0; i < INFO_SIZE; ++i)
 		this->info[i] = baseInfos[i];
 }
-
-CgiHandler::CgiHandler(const CgiHandler& other){(void) other;}
-
-CgiHandler& CgiHandler::operator=(const CgiHandler& other){(void) other; return (*this);}
 
 CgiHandler::~CgiHandler()
 {
@@ -148,10 +144,12 @@ void	CgiHandler::childProcess()
 
 std::string	CgiHandler::father()
 {
-	int status = 0;
-    char buffer[1024];
-	ssize_t bytes_read;
-    std::string cgi_output = HTTP_OK;
+	int 				status = 0;
+	int					wait = 0;
+    char 				buffer[1024];
+	ssize_t 			bytes_read;
+    std::string 		cgi_output = HTTP_OK;
+	const clock_t		start = clock();
 
 	CLOSE(pipes.to_cgi[OUTPUT]);
     CLOSE(pipes.from_cgi[INPUT]);
@@ -166,16 +164,27 @@ std::string	CgiHandler::father()
 
 	this->info[EXECUTED] = true;
 
-    waitpid(pid, &status, 0);
+	while (!wait)
+	{
+    	wait = waitpid(pid, &status, WNOHANG);
+		if (start + TIMEOUT_DELAY < clock())
+			break;
+	}
+	if (wait <= 0)
+	{
+		kill(pid, SIGTERM);
+		return getErrorPage(504, this->server);
+	}
+
 	Log(Log::LOG) << "CGI Executed" << Log::endl();
 
 	if (WIFEXITED(status))
 	{
         if (WEXITSTATUS(status) != 0)
-            return generatePage(500, "CGI FAILED");
+            return getErrorPage(500, this->server);
     }
 	else
-    	return generatePage(500, "CGI FAILED");
+    	return getErrorPage(500, this->server);
 	return cgi_output;
 }
 
