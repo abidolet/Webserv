@@ -170,7 +170,7 @@ std::vector<Server> Parser::populateServerInfos()
 
 	const std::string names[] = { "server" };
 	const std::string options[] = {
-		"listen", "host", "server_name", "return", "root",
+		"listen", "host", "server_name", "root",
 		"client_max_body_size", "allowed_methods", "error_page"
 	};
 
@@ -183,7 +183,7 @@ std::vector<Server> Parser::populateServerInfos()
 	std::vector<Block>::iterator it = m_block.inners.begin();
 	for ( ; it != m_block.inners.end(); ++it) // loop on each server block
 	{
-		it->dirAssert(std::vector<std::string>(options, options + 8));
+		it->dirAssert(std::vector<std::string>(options, options + 7));
 
 		Server serv;
 
