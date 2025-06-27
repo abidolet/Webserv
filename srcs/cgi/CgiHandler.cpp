@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/06/26 18:24:03 by mjuncker         ###   ########.fr       */
+/*   Created: Invalid date        by                   #+#    #+#             */
+/*   Updated: 2025/06/27 11:13:51 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -148,10 +148,12 @@ void	CgiHandler::childProcess()
 
 std::string	CgiHandler::father()
 {
-	int status = 0;
-    char buffer[1024];
-	ssize_t bytes_read;
-    std::string cgi_output = HTTP_OK;
+	int 				status = 0;
+	int					wait = 0;
+    char 				buffer[1024];
+	ssize_t 			bytes_read;
+    std::string 		cgi_output = HTTP_OK;
+	const clock_t		start = clock();
 
 	CLOSE(pipes.to_cgi[OUTPUT]);
     CLOSE(pipes.from_cgi[INPUT]);
@@ -166,7 +168,18 @@ std::string	CgiHandler::father()
 
 	this->info[EXECUTED] = true;
 
-    waitpid(pid, &status, 0);
+	while (!wait)
+	{
+    	wait = waitpid(pid, &status, WNOHANG);
+		if (start + TIMEOUT_DELAY < clock())
+			break;
+	}
+	if (wait <= 0)
+	{
+		kill(pid, SIGTERM);
+		return generatePage(504, "CGI TIMEOUT");
+	}
+
 	Log(Log::LOG) << "CGI Executed" << Log::endl();
 
 	if (WIFEXITED(status))

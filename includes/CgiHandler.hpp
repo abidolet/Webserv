@@ -3,16 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.hpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abidolet <abidolet@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/27 10:31:50 by abidolet         ###   ########.fr       */
+/*   Updated: 2025/06/27 11:14:41 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
 #include <string>
+#include <ctime>
 #include <stdexcept>
 #include <cstring>
 #include <cstdlib>
@@ -24,6 +25,8 @@
 
 #define	INPUT					1
 #define OUTPUT					0
+
+#define TIMEOUT_DELAY			10000
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
 
