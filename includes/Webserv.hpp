@@ -15,6 +15,7 @@
 
 # define CLOSE(fd) if (fd > 1) {close(fd); fd = -1;}
 # define THROW(msg) throw std::runtime_error(msg + static_cast<std::string>(strerror(errno)));
+# define THROW_GAI(msg, ret) throw std::runtime_error("getaddrinfo failed" + static_cast<std::string>(gai_strerror(ret))
 # define ERROR(msg) Log(Log::ERROR) << msg << strerror(errno) << Log::endl();
 
 struct	HttpRequest;

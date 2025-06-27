@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <ctime>
 
 #define MAX_EVENTS 1024
 
@@ -360,11 +361,13 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 		return (getErrorPage(413, server));
 	}
 
-	std::map<std::string, std::string>::const_iterator	it = request.headers.find("Content-Type");
+	std::map<std::string, std::string>::const_iterator	it = request.headers.find("request_type");
 	if (it == request.headers.end())
 	{
 		return (getErrorPage(400, server));
 	}
+
+	Log(Log::DEBUG) << "Handling POST request with request_type:" << it->second << Log::endl();
 
 	std::stringstream ss;
 	if (it->second == "client_credentials")
@@ -374,7 +377,8 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	}
 	else if (it->second == "upload")
 	{
-		std::string	filename = "upload_" + toString(time(NULL));
+		Log(Log::DEBUG) << "Handling upload request" << Log::endl();
+		std::string	filename = "upload_" + toString(std::time(NULL));
 		std::map<std::string, std::string>::const_iterator	it = request.headers.find("Content-Disposition");
 		if (it != request.headers.end())
 		{
@@ -383,18 +387,11 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 			{
 				filename = it->second.substr(pos + 10);
 				filename = filename.substr(0, filename.find("\""));
-
-				for (size_t	i = 0; i < filename.size(); ++i)
-				{
-					if (filename[i] == '/' || filename[i] == '\\' || filename[i] == ':')
-					{
-						filename[i] = '_';
-					}
-				}
 			}
 		}
 
 		std::string	filepath = request.location.path + request.location.upload_dir + "/" + filename;
+		Log(Log::DEBUG) << "Saving file to:" << filepath << Log::endl();
 
 		struct stat	statbuf;
 		if (stat(filepath.c_str(), &statbuf) == 0)
@@ -578,7 +575,7 @@ void	Webserv::init_servers()
 			struct sockaddr_in	server_addr;
 			server_addr.sin_family = AF_INET;
 
-			struct addrinfo		hints;
+			struct addrinfo	hints;
 			std::memset(&hints, 0, sizeof(hints));
 			hints.ai_family = AF_INET;
 			hints.ai_flags = AI_NUMERICHOST;
@@ -587,7 +584,7 @@ void	Webserv::init_servers()
 			int	ret = getaddrinfo(it->addr.c_str(), NULL, &hints, &res);
 			if (ret != 0)
 			{
-				throw std::runtime_error("getaddrinfo failed" + static_cast<std::string>(gai_strerror(ret)));
+				THROW("getaddrinfo failed: " + ret);
 			}
 
 			if (res)
@@ -598,11 +595,10 @@ void	Webserv::init_servers()
 			}
 			else
 			{
-				throw std::runtime_error("getaddrinfo returned no results: " + static_cast<std::string>(gai_strerror(ret)));
+				THROW("getaddrinfo returned no results: " + ret);
 			}
 
 			server_addr.sin_port = htons(it->port);
-
 			Log(Log::DEBUG) << "Server listening on port " << it->port << Log::endl();
 
 			if (bind(listener_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
