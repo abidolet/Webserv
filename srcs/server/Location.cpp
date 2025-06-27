@@ -8,8 +8,8 @@ void assertLocation(const Location& location, const Block& block)
 	if (location.path[0] != '/')
 		throw std::runtime_error("`path' directive must be an absolute path");
 
-	if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
-		throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
+	// if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
+	// 	throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
 
 	//? check that cgi_extension and cgi_pass are BOTH empty or filled
 	if (!location.cgi_extension.empty() != !location.cgi_pass.empty())
@@ -46,6 +46,7 @@ Location::Location(Block &block)
 	upload_dir = processPath(upload_dir);
 	index = processPath(index, true);
 
+	// TODO faire une rediretion assertion
 	{
 		std::string tmp;
 		block.loadSingleDirective("return", tmp);
@@ -53,8 +54,6 @@ Location::Location(Block &block)
 		{
 			std::vector<std::string> split = Utils::strsplit(tmp, ' ');
 			redirection.first = std::atoi(split[0].c_str());
-			if (split.size() != 2 || split[0] != "301")
-				throw std::runtime_error("invalid redirection");
 			redirection.second = split[1];
 		}
 	}

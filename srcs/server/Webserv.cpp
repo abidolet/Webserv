@@ -50,6 +50,7 @@ static const std::string	getStatusMessage(const int code)
 		case 413:	return ("Payload Too Large");
 		case 500:	return ("Internal Server Error");
 		case 501:	return ("Not Implemented");
+		case 504:	return ("Gateway Timeout");
 		default:	return ("Unknown status");
 	}
 }
@@ -65,7 +66,7 @@ static const std::string	getUrlPage(const int code, const std::string &location)
 	std::ostringstream	response;
 	response << "HTTP/1.1 " << code << " " << getStatusMessage(code) << "\r\n";
 
-	if (!location.empty() && code == 301)
+	if (!location.empty())
 	{
 		response << "Location: " << location << "\r\n";
 	}
@@ -260,7 +261,7 @@ std::vector<File> getFilesInDir(const std::string path)
 
 std::string getElt(const File& file, const std::string& path)
 {
-	Log(Log::WARNING) << path + " | " + file.name << Log::endl();
+	Log() << path + " | " + file.name << Log::endl();
 	std::stringstream ss;
 
 	std::string uri = path[path.size() - 1] == '/' ? path + file.name : path + "/" + file.name;
@@ -699,7 +700,7 @@ void	Webserv::run()
 
 				httpReq = parseRequest(request, *server);
 				std::string	response = "";
-				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"]);
+				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"], *server);
 
 				Server::registerSession(addr.sin_addr.s_addr);
 

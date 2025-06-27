@@ -3,16 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.hpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abidolet <abidolet@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/27 10:31:50 by abidolet         ###   ########.fr       */
+/*   Updated: 2025/06/27 11:50:50 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
 #include <string>
+#include <ctime>
 #include <stdexcept>
 #include <cstring>
 #include <cstdlib>
@@ -24,6 +25,8 @@
 
 #define	INPUT					1
 #define OUTPUT					0
+
+#define TIMEOUT_DELAY			3 * CLOCKS_PER_SEC
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
 
@@ -93,6 +96,7 @@ enum
 	AS_BODY = 0,
 	BODY_SENT,
 	PIPES_OPENED,
+	ERROR,
 	EXECUTED,
 	INFO_LAST_ELEM = EXECUTED
 };
@@ -125,7 +129,7 @@ const std::string	baseEnv[ENV_SIZE] = {	"REQUEST_METHOD=",
 											"HTTP_COOKIE=",
 											"GATEWAY_INTERFACE="};
 
-const bool			baseInfos[INFO_SIZE] = {false, false, false, false};
+const bool			baseInfos[INFO_SIZE] = {false, false, false, false, false};
 
 typedef struct	s_pipes
 {
@@ -140,7 +144,7 @@ class	CgiHandler
 {
 public:
 
-	CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength);
+	CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength, const Server& server);
 	~CgiHandler();
 
 	void		sendFd(int fd);
@@ -153,12 +157,15 @@ protected:
 
 private:
 
+	const Server&		server;
+
 	std::string	envConstruct[ENV_SIZE];
 	char*		env[ENV_SIZE + 1];
 
 	std::string method;
 	std::string	contentType;
 	std::string contentLength;
+	ssize_t		toReceive;
 
 	std::string	cgi;
 	std::string script;
@@ -177,7 +184,4 @@ private:
 	void		childProcess();
 	std::string	father();
 	void		addBody();
-
-	CgiHandler(const CgiHandler& other);
-	CgiHandler& operator=(const CgiHandler& other);
 };
