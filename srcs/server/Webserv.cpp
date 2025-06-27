@@ -370,7 +370,7 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	if (it->second == "client_credentials")
 	{
 		ss << server.lastUID;
-		return ss.str();
+		return generatePage(200, ss.str());
 	}
 	else if (it->second == "upload")
 	{
@@ -411,75 +411,18 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	{
 		std::map<std::string, std::string>::const_iterator uid = request.headers.find("UID");
 		if (uid == request.headers.end())
-			return "missing uid options";
+			return generatePage(404, "missing UID header");
 
 		std::vector<Session> sessions = readSessions("./.sessions");
-		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
-		return ss.str();
+		Session* session = Session::find(sessions, std::atoi(uid->second.c_str()));
+		if (session == NULL)
+			return generatePage(404, "ressource not found");
+
+		ss << session->visitCount;
+		return generatePage(200, ss.str());
 	}
 
 	return (generatePage(200, request.body));
-}
-
-std::string Server::handlePostRequest(HttpRequest request, const Server& server) const
-{
-	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Type");
-	if (it == request.headers.end())
-	{
-		return (getErrorPage(400, server));
-	}
-
-	std::stringstream ss;
-	if (it->second == "client_credentials")
-	{
-		ss << lastUID;
-		return ss.str();
-	}
-	else if (it->second == "upload")
-	{
-		std::string	filename = "upload_" + toString(time(NULL));
-		std::map<std::string, std::string>::const_iterator	it = request.headers.find("Content-Disposition");
-		if (it != request.headers.end())
-		{
-			size_t pos = it->second.find("filename=\"");
-			if (pos != std::string::npos)
-			{
-				filename = it->second.substr(pos + 10);
-				filename = filename.substr(0, filename.find("\""));
-			}
-		}
-
-		std::string	filepath = request.location.path + request.location.upload_dir + "/" + filename;
-
-		struct stat	statbuf;
-		if (stat(filepath.c_str(), &statbuf) == 0)
-		{
-			return (getErrorPage(409, server));
-		}
-
-		std::ofstream	outfile(filepath.c_str(), std::ios::binary);
-		if (!outfile)
-		{
-			return (generatePage(500, "Failed to create file: " + filepath));
-		}
-
-		outfile.write(request.body.data(), request.body.size());
-		outfile.close();
-
-		return (generatePage(201, "File saved as " + filename));
-	}
-	if (it->second == "client_visits")
-	{
-		std::map<std::string, std::string>::iterator uid = request.headers.find("UID");
-		if (uid == request.headers.end())
-			return "missing uid options";
-
-		std::vector<Session> sessions = readSessions("./.sessions");
-		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
-		return ss.str();
-	}
-
-	return request.body;
 }
 
 const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const
