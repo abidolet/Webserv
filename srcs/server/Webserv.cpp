@@ -66,7 +66,7 @@ static const std::string	getUrlPage(const int code, const std::string &location)
 	std::ostringstream	response;
 	response << "HTTP/1.1 " << code << " " << getStatusMessage(code) << "\r\n";
 
-	if (!location.empty() && code == 301)
+	if (!location.empty())
 	{
 		response << "Location: " << location << "\r\n";
 	}
