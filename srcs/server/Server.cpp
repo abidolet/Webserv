@@ -113,16 +113,36 @@ void Server::runSelfCheck()
 			Log(Log::WARNING) << Parser::InvalidDirOrFileException(it->second).what() << Log::endl();
 	}
 
-	// checking if mutiple location are the same
-	std::vector<std::string> names;
-	for (size_t i = 0; i < locations.size(); i++)
 	{
-		for (size_t j = 0; j < names.size(); j++)
+		// checking if mutiple location are the same
+		std::vector<std::string> names;
+		for (size_t i = 0; i < locations.size(); i++)
 		{
-			if (names[j] == locations[i].root)
-				throw std::runtime_error("duplicate location directive; `" + names[j] + "'");
+			for (size_t j = 0; j < names.size(); j++)
+			{
+				if (names[j] == locations[i].root)
+					throw std::runtime_error("duplicate location directive; `" + names[j] + "'");
+			}
+			names.push_back(locations[i].root);
 		}
-		names.push_back(locations[i].root);
+	}
+
+	{
+		// checking if mutiple location are the same
+		std::vector<Listen> tmp;
+		for (size_t i = 0; i < listen.size(); i++)
+		{
+			for (size_t j = 0; j < tmp.size(); j++)
+			{
+				if (tmp[j] == listen[i])
+				{
+					std::stringstream ss;
+					ss << tmp[j].addr << ":" << tmp[j].port;
+					throw std::runtime_error("duplicate listen directive; `" + ss.str() + "'");
+				}
+			}
+			tmp.push_back(listen[i]);
+		}
 	}
 
 	Log(Log::SUCCESS) << "server self check pass!" << Log::endl();
