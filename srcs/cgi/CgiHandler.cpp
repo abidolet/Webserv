@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid date        by                   #+#    #+#             */
-/*   Updated: 2025/06/27 11:18:57 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/27 11:41:55 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,11 @@ CgiHandler::CgiHandler(const std::string& method, const std::string& contentType
 		this->envConstruct[i] = baseEnv[i];
 	for (int i = 0; i < INFO_SIZE; ++i)
 		this->info[i] = baseInfos[i];
+
+	if (this->contentLength.size() > 0)
+		this->toReceive = strtol(this->contentLength.c_str(), NULL, 10);
+	else
+		this->toReceive = 0;
 }
 
 CgiHandler::~CgiHandler()
@@ -31,15 +36,26 @@ CgiHandler::~CgiHandler()
 
 void		CgiHandler::addBody()
 {
-	char		buffer[4096];
-	ssize_t		bytes_read;
+	char				buffer[4096];
+	ssize_t				bytes_read;
+	const clock_t		start = clock();
 
-	while ((bytes_read = recv(this->fd, buffer, sizeof(buffer), 0)) > 0)
+	if (this->toReceive) do
 	{
+		bytes_read = recv(this->fd, buffer, sizeof(buffer), 0);
+		if (start + TIMEOUT_DELAY < clock())
+			break;
+		if (bytes_read == -1)
+			continue;
 		Log(Log::DEBUG) << "Writing" << Log::endl();
 		write (this->pipes.to_cgi[INPUT], buffer, bytes_read);
-	}
-	Log(Log::DEBUG) << "Done receiving file" << Log::endl();
+		this->toReceive -= bytes_read;
+		Log(Log::DEBUG) << "Need :" << this->toReceive << Log::endl();
+	}while (this->toReceive);
+	if (this->toReceive)
+		Log(Log::DEBUG) << "Timeout while receiving file" << Log::endl();
+	else
+		Log(Log::DEBUG) << "Done receiving file" << Log::endl();
 	this->info[BODY_SENT] = true;
 }
 
@@ -73,7 +89,7 @@ std::string	CgiHandler::launch()
 		this->addBody();
 		return this->father();
 	}
-	return generatePage(500, "CGI FAILED");
+	return getErrorPage(500, this->server);
 }
 
 void	CgiHandler::createPipes()
@@ -166,6 +182,7 @@ std::string	CgiHandler::father()
 
 	while (!wait)
 	{
+		Log(Log::LOG) << "Waiting for CGI to complete clock: " << clock() << Log::endl();
     	wait = waitpid(pid, &status, WNOHANG);
 		if (start + TIMEOUT_DELAY < clock())
 			break;

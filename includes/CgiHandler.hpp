@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/27 11:19:02 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/27 11:35:58 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@
 #define	INPUT					1
 #define OUTPUT					0
 
-#define TIMEOUT_DELAY			10000
+#define TIMEOUT_DELAY			3 * CLOCKS_PER_SEC
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
 
@@ -164,6 +164,7 @@ private:
 	std::string method;
 	std::string	contentType;
 	std::string contentLength;
+	ssize_t		toReceive;
 
 	std::string	cgi;
 	std::string script;
