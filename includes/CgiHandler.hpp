@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.hpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: abidolet <abidolet@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/26 18:17:29 by mjuncker         ###   ########.fr       */
+/*   Updated: 2025/06/27 10:31:50 by abidolet         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,13 +21,11 @@
 #include <sys/socket.h>
 
 #include "Webserv.hpp"
-#include "Log.hpp"
 
 #define	INPUT					1
 #define OUTPUT					0
 
 #define	DEFAULT_SERVER_PROTOCOL	"HTTP/1.1"
-#define	DEFAULT_SERVER_ROOT		"/home/ygille/42/www/"
 
 #define HTTP_OK					"HTTP/1.1 200 OK\n"
 
@@ -70,15 +68,15 @@ enum
 	QUERY_STRING,
 	CONTENT_TYPE,
 	CONTENT_LENGTH,
-	REQUEST_URI,	
-	SERVER_NAME,	
-	SERVER_PORT,	
+	REQUEST_URI,
+	SERVER_NAME,
+	SERVER_PORT,
 	SERVER_PROTOCOL,
-	SERVER_SOFTWARE,	
+	SERVER_SOFTWARE,
 	DOCUMENT_ROOT,
 	REMOTE_ADDR,
-	REMOTE_HOST,	
-	REMOTE_PORT,	
+	REMOTE_HOST,
+	REMOTE_PORT,
 	HTTP_USER_AGENT,
 	HTTP_ACCEPT,
 	HTTPS,
@@ -109,15 +107,15 @@ const std::string	baseEnv[ENV_SIZE] = {	"REQUEST_METHOD=",
 											"QUERY_STRING=",
 											"CONTENT_TYPE=",
 											"CONTENT_LENGTH=",
-											"REQUEST_URI=",	
-											"SERVER_NAME=",	
-											"SERVER_PORT=",	
+											"REQUEST_URI=",
+											"SERVER_NAME=",
+											"SERVER_PORT=",
 											"SERVER_PROTOCOL=",
-											"SERVER_SOFTWARE=",	
+											"SERVER_SOFTWARE=",
 											"DOCUMENT_ROOT=",
 											"REMOTE_ADDR=",
-											"REMOTE_HOST=",	
-											"REMOTE_PORT=",	
+											"REMOTE_HOST=",
+											"REMOTE_PORT=",
 											"HTTP_USER_AGENT=",
 											"HTTP_ACCEPT=",
 											"HTTPS=",
@@ -146,7 +144,7 @@ public:
 	~CgiHandler();
 
 	void		sendFd(int fd);
-	
+
 	std::string	launch();
 
 	bool		cgiRequest(HttpRequest request, std::vector<Location> locations);

@@ -1,15 +1,12 @@
 #include "Webserv.hpp"
 #include "Parser.hpp"
-#include "Log.hpp"
+#include "CgiHandler.hpp"
 #include <sys/epoll.h>
-#include <netinet/in.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <algorithm>
 #include <dirent.h>
 #include "ParserUtils.hpp"
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <netdb.h>
 #include <ctime>
 
