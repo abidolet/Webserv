@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/27 11:35:58 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/27 11:50:50 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,6 +96,7 @@ enum
 	AS_BODY = 0,
 	BODY_SENT,
 	PIPES_OPENED,
+	ERROR,
 	EXECUTED,
 	INFO_LAST_ELEM = EXECUTED
 };
@@ -128,7 +129,7 @@ const std::string	baseEnv[ENV_SIZE] = {	"REQUEST_METHOD=",
 											"HTTP_COOKIE=",
 											"GATEWAY_INTERFACE="};
 
-const bool			baseInfos[INFO_SIZE] = {false, false, false, false};
+const bool			baseInfos[INFO_SIZE] = {false, false, false, false, false};
 
 typedef struct	s_pipes
 {

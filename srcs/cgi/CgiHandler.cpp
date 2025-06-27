@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid date        by                   #+#    #+#             */
-/*   Updated: 2025/06/27 11:41:55 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/27 11:51:08 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,10 +53,15 @@ void		CgiHandler::addBody()
 		Log(Log::DEBUG) << "Need :" << this->toReceive << Log::endl();
 	}while (this->toReceive);
 	if (this->toReceive)
+	{
 		Log(Log::DEBUG) << "Timeout while receiving file" << Log::endl();
+		this->info[ERROR] = true;
+	}
 	else
+	{
 		Log(Log::DEBUG) << "Done receiving file" << Log::endl();
-	this->info[BODY_SENT] = true;
+		this->info[BODY_SENT] = true;
+	}
 }
 
 std::string	CgiHandler::launch()
@@ -184,7 +189,7 @@ std::string	CgiHandler::father()
 	{
 		Log(Log::LOG) << "Waiting for CGI to complete clock: " << clock() << Log::endl();
     	wait = waitpid(pid, &status, WNOHANG);
-		if (start + TIMEOUT_DELAY < clock())
+		if (start + TIMEOUT_DELAY < clock() || this->info[ERROR])
 			break;
 	}
 	if (wait <= 0)
