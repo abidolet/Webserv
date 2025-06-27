@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid date        by                   #+#    #+#             */
-/*   Updated: 2025/06/27 11:13:51 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/27 11:18:57 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,18 +14,14 @@
 #include "CgiHandler.hpp"
 
 /* Canonical Form */
-CgiHandler::CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength)
-: method(method), contentType(contentType), contentLength(contentLength), fd(0)
+CgiHandler::CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength, const Server& server)
+: server(server), method(method), contentType(contentType), contentLength(contentLength), fd(0)
 {
 	for (int i = 0; i < ENV_SIZE; ++i)
 		this->envConstruct[i] = baseEnv[i];
 	for (int i = 0; i < INFO_SIZE; ++i)
 		this->info[i] = baseInfos[i];
 }
-
-CgiHandler::CgiHandler(const CgiHandler& other){(void) other;}
-
-CgiHandler& CgiHandler::operator=(const CgiHandler& other){(void) other; return (*this);}
 
 CgiHandler::~CgiHandler()
 {
@@ -177,7 +173,7 @@ std::string	CgiHandler::father()
 	if (wait <= 0)
 	{
 		kill(pid, SIGTERM);
-		return generatePage(504, "CGI TIMEOUT");
+		return getErrorPage(504, this->server);
 	}
 
 	Log(Log::LOG) << "CGI Executed" << Log::endl();
@@ -185,10 +181,10 @@ std::string	CgiHandler::father()
 	if (WIFEXITED(status))
 	{
         if (WEXITSTATUS(status) != 0)
-            return generatePage(500, "CGI FAILED");
+            return getErrorPage(500, this->server);
     }
 	else
-    	return generatePage(500, "CGI FAILED");
+    	return getErrorPage(500, this->server);
 	return cgi_output;
 }
 

@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 11:58:29 by ygille            #+#    #+#             */
-/*   Updated: 2025/06/27 11:14:41 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/27 11:19:02 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,7 +143,7 @@ class	CgiHandler
 {
 public:
 
-	CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength);
+	CgiHandler(const std::string& method, const std::string& contentType, const std::string& contentLength, const Server& server);
 	~CgiHandler();
 
 	void		sendFd(int fd);
@@ -155,6 +155,8 @@ public:
 protected:
 
 private:
+
+	const Server&		server;
 
 	std::string	envConstruct[ENV_SIZE];
 	char*		env[ENV_SIZE + 1];
@@ -180,7 +182,4 @@ private:
 	void		childProcess();
 	std::string	father();
 	void		addBody();
-
-	CgiHandler(const CgiHandler& other);
-	CgiHandler& operator=(const CgiHandler& other);
 };
