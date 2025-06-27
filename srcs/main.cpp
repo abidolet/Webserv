@@ -29,6 +29,7 @@ int main (int argc, char *argv[])
 	signal(SIGQUIT, handle_signal);
 	signal(SIGTERM, handle_signal);
 
+	Log::disableFlags(F_DEBUG);
 	#if ENABLE_LOG_FILE
 		Log::setupLogFile();
 	#endif
@@ -64,7 +65,4 @@ int main (int argc, char *argv[])
 	}
 	return (0);
 }
-
-
-
 
