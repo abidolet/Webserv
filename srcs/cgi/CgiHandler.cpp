@@ -6,7 +6,7 @@
 /*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid date        by                   #+#    #+#             */
-/*   Updated: 2025/06/27 11:51:08 by ygille           ###   ########.fr       */
+/*   Updated: 2025/06/27 12:15:33 by ygille           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -175,7 +175,7 @@ std::string	CgiHandler::father()
 	CLOSE(pipes.to_cgi[OUTPUT]);
     CLOSE(pipes.from_cgi[INPUT]);
 
-    while ((bytes_read = read(pipes.from_cgi[0], buffer, sizeof(buffer) - 1)) > 0)
+    while ((bytes_read = read(pipes.from_cgi[0], buffer, sizeof(buffer) - 1)) > 0 && !this->info[ERROR])
 	{
         buffer[bytes_read] = '\0';
         cgi_output += buffer;
