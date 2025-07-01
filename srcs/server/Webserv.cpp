@@ -309,21 +309,18 @@ std::string getDirectoryListing(HttpRequest& request)
 const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& server) const
 {
 	std::string	path = request.path;
-	if (path.find(".") == (size_t)-1)
-	{
-		if (Utils::dirAccess(request.path))
-		{
-			Log(Log::SUCCESS) << "trying to get to dir listing" << Log::endl();
-			if (request.location.directoryListing)
-				return getDirectoryListing(request);
-			Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
-			return (getErrorPage(403, server));
-		}
-		Log(Log::WARNING) << "directory not found:'" << path << "'" << Log::endl();
-		return (getErrorPage(404, server));
-	}
 
 	struct stat	statbuf;
+	if (stat(path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
+	{
+		Log(Log::SUCCESS) << "trying to get to dir listing" << Log::endl();
+		if (request.location.directoryListing)
+			return getDirectoryListing(request);
+		Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
+		return (getErrorPage(403, server));
+	}
+
+	std::memset(&statbuf, 0, sizeof(struct stat));
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
 		Log(Log::WARNING) << "File not found:'" << path << "'" << Log::endl();
