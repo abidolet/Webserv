@@ -83,8 +83,8 @@ Block Parser::loadBlock(std::vector<std::string>::iterator& it, const std::strin
 
 std::vector<std::string> setupAllowedMethods(Block& block)
 {
-	std::string	defaults[] = {"GET", "POST", "DELETE"};
-	std::vector<std::string> result(defaults, defaults + 3);
+	std::string	defaults[] = {"GET", "POST", "DELETE", "OPTIONS"};
+	std::vector<std::string> result(defaults, defaults + 4);
 
 	std::string found;
 	block.loadSingleDirective("allowed_methods", found);
@@ -104,8 +104,8 @@ std::vector<std::string> setupAllowedMethods(Block& block)
 			if (*it == defaults[i])
 				break;
 		}
-		if (i == 3)
-			throw Parser::InvalidArgumentException(*it, Utils::findClosest(*it, std::vector<std::string>(defaults, defaults + 3)));
+		if (i == 4)
+			throw Parser::InvalidArgumentException(*it, Utils::findClosest(*it, std::vector<std::string>(defaults, defaults + 4)));
 		++it;
 	}
 	return result;

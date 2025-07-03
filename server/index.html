@@ -5,14 +5,14 @@
 	<title>webserv</title>
 </head>
 <body>
-
-	<button class="test" onclick="sayHello()">Click Me</button>
-
-	<script>
-	function sayHello() {
-		alert("Hello from the button!");
-	}
-	</script>
-
+	
+	<button onclick="getSessionUID()">get uid</button>
+	<button onclick="getSessionRequests()">get request count</button>
+	
+	<h3 id="uid_text">request uid:</h3>
+	<h3 id="requests_text">request uid:</h3>
+	
+	
 </body>
 </html>
+<script type="text/javascript" src="./script.js"></script>

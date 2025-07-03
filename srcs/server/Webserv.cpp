@@ -67,14 +67,21 @@ std::string getContentType(const std::string& filename)
 		return "text/html";
 	if (filename.find(".css") != (size_t)-1)
 		return "text/css";
+	if (filename.find(".js") != (size_t)-1)
+		return "text/javascript";
 
 	return "text/plain";
+}
+
+const std::string getCORSHeaders()
+{
+	return "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: request_type\r\nAccess-Control-Allow-Headers: UID\r\n";
 }
 
 const std::string	generatePage(const int code, const std::string &content, const std::string &name)
 {
 	return ("HTTP/1.1 " + toString(code) + " " + getStatusMessage(code) + "\r\n" + "Content-Type: " + getContentType(name) + "\r\n"
-		+ "Connection: close\r\n" + "Content-Length: "+ toString(content.size()) + "\r\n\r\n" + content);
+		+ "Connection: close\r\n" + getCORSHeaders() + "Content-Length: "+ toString(content.size()) + "\r\n\r\n" + content);
 }
 
 static const std::string	getUrlPage(const int code, const std::string &location)
@@ -410,7 +417,7 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	std::map<std::string, std::string>::const_iterator	it = request.headers.find("request_type");
 	if (it == request.headers.end())
 	{
-		return (getErrorPage(400, server));
+		return (getErrorPage(200, server));
 	}
 
 	Log(Log::DEBUG) << "Handling POST request with request_type:" << it->second << Log::endl();
@@ -765,6 +772,10 @@ void	Webserv::run()
 				else if (httpReq.method == "DELETE")
 				{
 					response = handleDeleteRequest(httpReq.path, *server);
+				}
+				else if (httpReq.method == "OPTIONS")
+				{
+					response = getErrorPage(200, *server);
 				}
 				else
 				{
