@@ -2,3 +2,4 @@ webserv
 libwebserv.a
 .vscode
 obj*
+.sessions

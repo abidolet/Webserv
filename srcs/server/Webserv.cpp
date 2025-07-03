@@ -261,7 +261,7 @@ std::vector<File> getFilesInDir(const std::string path)
 
 std::string getElt(const File& file, const std::string& path)
 {
-	Log(Log::WARNING) << path + " | " + file.name << Log::endl();
+	Log() << path + " | " + file.name << Log::endl();
 	std::stringstream ss;
 
 	std::string uri = path[path.size() - 1] == '/' ? path + file.name : path + "/" + file.name;
@@ -306,11 +306,34 @@ std::string getDirectoryListing(HttpRequest& request)
 	return (generatePage(200, ss.str()));
 }
 
+#include <iostream>
+bool isTTY(const char* name)
+{
+
+	struct stat st;
+	if (stat(name, &st) == -1)
+	{
+		ERROR("cannot check is tty");
+		return false;
+	}
+
+	return S_ISCHR(st.st_mode);
+}
 const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& server) const
 {
 	std::string	path = request.path;
 
 	struct stat	statbuf;
+	if (stat(path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
+	{
+		Log(Log::SUCCESS) << "trying to get to dir listing" << Log::endl();
+		if (request.location.directoryListing)
+			return getDirectoryListing(request);
+		Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
+		return (getErrorPage(403, server));
+	}
+
+	std::memset(&statbuf, 0, sizeof(struct stat));
 	if (stat(path.c_str(), &statbuf) != 0)
 	{
 		Log(Log::WARNING) << "File not found:'" << path << "'" << Log::endl();
@@ -337,13 +360,21 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 		return (getErrorPage(403, server));
 	}
 
+	if (isTTY(path.c_str()))
+	{
+		return getErrorPage(501, server);
+	}
+
 	std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
 	std::string	page = generatePage(200, content);
 	size_t		header_end = page.find("\r\n\r\n");
+
 	if (header_end != std::string::npos)
 	{
 		page.insert(header_end, "\r\n" + server.getCookies());
 	}
+
 	return (page);
 }
 
@@ -369,7 +400,7 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	if (it->second == "client_credentials")
 	{
 		ss << server.lastUID;
-		return ss.str();
+		return generatePage(200, ss.str());
 	}
 	else if (it->second == "upload")
 	{
@@ -410,75 +441,18 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	{
 		std::map<std::string, std::string>::const_iterator uid = request.headers.find("UID");
 		if (uid == request.headers.end())
-			return "missing uid options";
+			return generatePage(404, "missing UID header");
 
 		std::vector<Session> sessions = readSessions("./.sessions");
-		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
-		return ss.str();
+		Session* session = Session::find(sessions, std::atoi(uid->second.c_str()));
+		if (session == NULL)
+			return generatePage(404, "ressource not found");
+
+		ss << session->visitCount;
+		return generatePage(200, ss.str());
 	}
 
 	return (generatePage(200, request.body));
-}
-
-std::string Server::handlePostRequest(HttpRequest request, const Server& server) const
-{
-	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Type");
-	if (it == request.headers.end())
-	{
-		return (getErrorPage(400, server));
-	}
-
-	std::stringstream ss;
-	if (it->second == "client_credentials")
-	{
-		ss << lastUID;
-		return ss.str();
-	}
-	else if (it->second == "upload")
-	{
-		std::string	filename = "upload_" + toString(time(NULL));
-		std::map<std::string, std::string>::const_iterator	it = request.headers.find("Content-Disposition");
-		if (it != request.headers.end())
-		{
-			size_t pos = it->second.find("filename=\"");
-			if (pos != std::string::npos)
-			{
-				filename = it->second.substr(pos + 10);
-				filename = filename.substr(0, filename.find("\""));
-			}
-		}
-
-		std::string	filepath = request.location.path + request.location.upload_dir + "/" + filename;
-
-		struct stat	statbuf;
-		if (stat(filepath.c_str(), &statbuf) == 0)
-		{
-			return (getErrorPage(409, server));
-		}
-
-		std::ofstream	outfile(filepath.c_str(), std::ios::binary);
-		if (!outfile)
-		{
-			return (generatePage(500, "Failed to create file: " + filepath));
-		}
-
-		outfile.write(request.body.data(), request.body.size());
-		outfile.close();
-
-		return (generatePage(201, "File saved as " + filename));
-	}
-	if (it->second == "client_visits")
-	{
-		std::map<std::string, std::string>::iterator uid = request.headers.find("UID");
-		if (uid == request.headers.end())
-			return "missing uid options";
-
-		std::vector<Session> sessions = readSessions("./.sessions");
-		ss << Session::find(sessions, std::atoi(uid->second.c_str()))->visitCount;
-		return ss.str();
-	}
-
-	return request.body;
 }
 
 const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const
@@ -749,6 +723,7 @@ void	Webserv::run()
 				}
 
 				httpReq = parseRequest(request, *server);
+
 				std::string	response = "";
 				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"], *server);
 				Server::registerSession(addr.sin_addr.s_addr);
@@ -761,7 +736,7 @@ void	Webserv::run()
 				{
 					response = getErrorPage(405, *server);
 				}
-				else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
+				else if (cgi.cgiRequest(httpReq, server->locations))
 				{
 					if (!httpReq.headers["Content-Length"].empty())
 					{
@@ -774,6 +749,7 @@ void	Webserv::run()
 				else if (httpReq.method == "GET")
 				{
 					response = handleGetRequest(httpReq, *server);
+
 				}
 				else if (httpReq.method == "POST")
 				{
