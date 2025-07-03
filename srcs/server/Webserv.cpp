@@ -306,6 +306,19 @@ std::string getDirectoryListing(HttpRequest& request)
 	return (generatePage(200, ss.str()));
 }
 
+#include <iostream>
+bool isTTY(const char* name)
+{
+
+	struct stat st;
+	if (stat(name, &st) == -1)
+	{
+		ERROR("cannot check is tty");
+		return false;
+	}
+
+	return S_ISCHR(st.st_mode);
+}
 const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& server) const
 {
 	std::string	path = request.path;
@@ -336,13 +349,21 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 		return (getErrorPage(403, server));
 	}
 
+	if (isTTY(path.c_str()))
+	{
+		return getErrorPage(501, server);
+	}
+
 	std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
 	std::string	page = generatePage(200, content);
 	size_t		header_end = page.find("\r\n\r\n");
+
 	if (header_end != std::string::npos)
 	{
 		page.insert(header_end, "\r\n" + server.getCookies());
 	}
+
 	return (page);
 }
 
@@ -696,6 +717,7 @@ void	Webserv::run()
 				}
 
 				httpReq = parseRequest(request, *server);
+
 				std::string	response = "";
 				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"], *server);
 
@@ -709,7 +731,7 @@ void	Webserv::run()
 				{
 					response = getErrorPage(405, *server);
 				}
-				else if (cgi.cgiRequest(httpReq, this->_servers.data()->locations))
+				else if (cgi.cgiRequest(httpReq, server->locations))
 				{
 					if (!httpReq.headers["Content-Length"].empty())
 						cgi.sendFd(fd);
@@ -719,6 +741,7 @@ void	Webserv::run()
 				else if (httpReq.method == "GET")
 				{
 					response = handleGetRequest(httpReq, *server);
+
 				}
 				else if (httpReq.method == "POST")
 				{

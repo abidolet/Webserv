@@ -5,7 +5,7 @@ OBJ_DIR = obj-$(MODE)
 INCLUDES = -Iincludes
 
 CXX = c++
-CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98 -fPIE
+CXXFLAGS = -Wall -Werror -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -std=c++98
 
 ifeq ($(MODE), debug)
 	CXX = g++
