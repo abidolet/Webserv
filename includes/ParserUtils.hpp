@@ -33,6 +33,8 @@ namespace Utils
 	void printServConfig(Server serv);
 	void printFile(const std::vector<std::string> &file);
 
+	std::string processPath(const std::string& old, bool isCgi = false);
+
 }
 
 #endif // PARSERUTILS_HPP

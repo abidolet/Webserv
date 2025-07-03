@@ -159,6 +159,6 @@ class	Webserv
 };
 
 const std::string	toString(const int value);
-const std::string	generatePage(const int code, const std::string &content);
+const std::string	generatePage(const int code, const std::string &content, const std::string &name);
 
 #endif

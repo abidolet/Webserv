@@ -8,28 +8,19 @@ void assertLocation(const Location& location, const Block& block)
 	if (location.path[0] != '/')
 		throw std::runtime_error("`path' directive must be an absolute path");
 
-	// if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
-	// 	throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
+	if (!location.cgi_pass.empty() && Utils::fileAccess(location.cgi_pass) == false)
+		throw std::runtime_error("cannot open cgi pass: `" + location.cgi_pass + "'");
 
 	//? check that cgi_extension and cgi_pass are BOTH empty or filled
 	if (!location.cgi_extension.empty() != !location.cgi_pass.empty())
 		throw std::runtime_error("cannot have only one cgi directive; " + block.block_name);
 }
 
-std::string processPath(const std::string& old, bool isCgi = false)
-{
-	if (old.empty())
-		return std::string();
-	if (old[0] != '/' && !isCgi)
-		throw std::runtime_error("path need to be absolute; `" + old + "'");
 
-	std::string path = Utils::strtrim(old, "/");
-	return isCgi ? path : "/" + path;
-}
 
 Location::Location(Block &block)
 	:	path("/"), root("/"), index(""),
-		is_cgi(false), directoryListing(false), redirection(-1, "")
+		is_cgi(false), directoryListing(true), redirection(-1, "")
 {
 	setupLocationRoot(block);
 	block.loadSingleDirective("path", path);
@@ -40,19 +31,20 @@ Location::Location(Block &block)
 	if (!cgi_extension.empty())
 		is_cgi = true;
 
-	path = processPath(path);
-	root = is_cgi ? processPath(root, true) : processPath(root);
-	cgi_pass = processPath(cgi_pass);
-	upload_dir = processPath(upload_dir);
-	index = processPath(index, true);
+	path = Utils::processPath(path);
+	root = is_cgi ? Utils::processPath(root, true) : Utils::processPath(root);
+	cgi_pass = Utils::processPath(cgi_pass);
+	upload_dir = Utils::processPath(upload_dir);
+	index = Utils::processPath(index, true);
 
-	// TODO faire une rediretion assertion
 	{
 		std::string tmp;
 		block.loadSingleDirective("return", tmp);
 		if (!tmp.empty())
 		{
 			std::vector<std::string> split = Utils::strsplit(tmp, ' ');
+			if (split.size() != 2 || split[0] != "301")
+				throw std::runtime_error("redirection error");
 			redirection.first = std::atoi(split[0].c_str());
 			redirection.second = split[1];
 		}

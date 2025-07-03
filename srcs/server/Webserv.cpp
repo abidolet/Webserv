@@ -55,10 +55,26 @@ static const std::string	getStatusMessage(const int code)
 	}
 }
 
-const std::string	generatePage(const int code, const std::string &content)
+std::string getContentType(const std::string& filename)
 {
-	return ("HTTP/1.1 " + toString(code) + " " + getStatusMessage(code) + "\r\n" + "Content-Type: text/html\r\n"
-		+ "Connection: close\r\n" + "Content-Length: " + toString(content.length() + 2) + "\r\n\r\n" + content + "\r\n");
+	if (filename.find(".jpg") != (size_t)-1 || filename.find(".jpeg") != (size_t)-1)
+		return "image/jpeg";
+	if (filename.find(".png") != (size_t)-1)
+		return "image/png";
+	if (filename.find(".gif") != (size_t)-1)
+		return "image/gif";
+	if (filename.find(".html") != (size_t)-1)
+		return "text/html";
+	if (filename.find(".css") != (size_t)-1)
+		return "text/css";
+
+	return "text/plain";
+}
+
+const std::string	generatePage(const int code, const std::string &content, const std::string &name)
+{
+	return ("HTTP/1.1 " + toString(code) + " " + getStatusMessage(code) + "\r\n" + "Content-Type: " + getContentType(name) + "\r\n"
+		+ "Connection: close\r\n" + "Content-Length: "+ toString(content.size()) + "\r\n\r\n" + content);
 }
 
 static const std::string	getUrlPage(const int code, const std::string &location)
@@ -91,13 +107,13 @@ const std::string	getErrorPage(const int error_code, const Server& server)
 		{
 			Log(Log::DEBUG) << "Custom error page found:" << it->second << Log::endl();
 			std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-			return (generatePage(error_code, content));
+			return (generatePage(error_code, content, it->second));
 		}
 	}
 
 	Log(Log::DEBUG) << "Custom error page not found, returning default" << Log::endl();
 	std::string	content = "<html><body><h1>" + toString(error_code) + " " + getStatusMessage(error_code) + "</h1></body></html>";
-	return (generatePage(error_code, content));
+	return (generatePage(error_code, content, ".html"));
 }
 
 const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Server& server) const
@@ -204,7 +220,7 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 		full_path = '/' + Utils::strtrim(full_path, "/");
 		Log(Log::DEBUG) << "Checking file stats for:" << full_path << Log::endl();
 		struct stat	statbuf;
-		if (stat(full_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode) && !best_match->directoryListing)
+		if (stat(full_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode))
 		{
 			std::string	index = best_match->index;
 			Log(Log::DEBUG) << "Path is a directory adding index:" << index << Log::endl();
@@ -261,10 +277,13 @@ std::vector<File> getFilesInDir(const std::string path)
 
 std::string getElt(const File& file, const std::string& path)
 {
-	Log() << path + " | " + file.name << Log::endl();
+	std::string processed = Utils::processPath(path);
+	if (processed.size() != 1)
+		processed += "/";
+	Log() << processed + " | " + file.name << Log::endl();
 	std::stringstream ss;
 
-	std::string uri = path[path.size() - 1] == '/' ? path + file.name : path + "/" + file.name;
+	std::string uri = processed + file.name;
 	ss << "<div class='elt'><a href='" << uri << "'>" \
 	 << file.name << "</a> <p>" << file.size << "bytes</p></div>";
 	return ss.str();
@@ -303,7 +322,7 @@ std::string getDirectoryListing(HttpRequest& request)
 	ss << "</body>";
 	ss << "</html>";
 
-	return (generatePage(200, ss.str()));
+	return (generatePage(200, ss.str(), ".html"));
 }
 
 #include <iostream>
@@ -316,9 +335,9 @@ bool isTTY(const char* name)
 		ERROR("cannot check is tty");
 		return false;
 	}
-
 	return S_ISCHR(st.st_mode);
 }
+
 const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& server) const
 {
 	std::string	path = request.path;
@@ -362,17 +381,17 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 
 	if (isTTY(path.c_str()))
 	{
-		return getErrorPage(501, server);
+		return getErrorPage(404, server); // firefox return 404, chrome nothing
 	}
 
 	std::string	content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-	std::string	page = generatePage(200, content);
-	size_t		header_end = page.find("\r\n\r\n");
+	std::string	page = generatePage(200, content, path);
+	size_t		header_end = page.find("Content-Type");
 
 	if (header_end != std::string::npos)
 	{
-		page.insert(header_end, "\r\n" + server.getCookies());
+		page.insert(header_end, server.getCookies());
 	}
 
 	return (page);
@@ -400,7 +419,7 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	if (it->second == "client_credentials")
 	{
 		ss << server.lastUID;
-		return generatePage(200, ss.str());
+		return generatePage(200, ss.str(), ".html");
 	}
 	else if (it->second == "upload")
 	{
@@ -429,47 +448,35 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 		std::ofstream	outfile(filepath.c_str(), std::ios::binary);
 		if (!outfile)
 		{
-			return (generatePage(500, "Failed to create file: " + filepath));
+			return (generatePage(500, "Failed to create file: " + filepath, ".html"));
 		}
 
 		outfile.write(request.body.data(), request.body.size());
 		outfile.close();
 
-		return (generatePage(201, "File saved as " + filename));
+		return (generatePage(201, "File saved as " + filename, ".html"));
 	}
 	if (it->second == "client_visits")
 	{
 		std::map<std::string, std::string>::const_iterator uid = request.headers.find("UID");
 		if (uid == request.headers.end())
-			return generatePage(404, "missing UID header");
+			return generatePage(404, "missing UID header", ".html");
 
 		std::vector<Session> sessions = readSessions("./.sessions");
 		Session* session = Session::find(sessions, std::atoi(uid->second.c_str()));
 		if (session == NULL)
-			return generatePage(404, "ressource not found");
+			return generatePage(404, "ressource not found", ".html");
 
 		ss << session->visitCount;
-		return generatePage(200, ss.str());
+		return generatePage(200, ss.str(), ".html");
 	}
 
-	return (generatePage(200, request.body));
+	return (generatePage(200, request.body, ".html"));
 }
 
 const std::string	Webserv::handleDeleteRequest(const std::string& path, const Server& server) const
 {
 	Log() << "Delete request for: " << path << Log::endl();
-
-	std::string	tmp = path;
-	tmp = tmp.erase(tmp.find_last_of('/'));
-	while (!tmp.empty())
-	{
-		if (access(tmp.c_str(), W_OK) != 0)
-		{
-			Log(Log::ERROR) << "Cannot delete" << path << "missing permission for:" << tmp << Log::endl();
-			return (getErrorPage(403, server));
-		}
-		tmp = tmp.erase(tmp.find_last_of('/'));
-	}
 
 	struct stat	statbuf;
 	if (stat(path.c_str(), &statbuf) != 0)
@@ -486,7 +493,7 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 	if (std::remove(path.c_str()) == 0)
 	{
 		Log(Log::SUCCESS) << "File deleted !" << path << Log::endl();
-		return (generatePage(200, "File deleted successfully\n"));
+		return (generatePage(200, "File deleted successfully\n", ".html"));
 	}
 	else
 	{
@@ -764,6 +771,7 @@ void	Webserv::run()
 					response = getErrorPage(501, *server);
 				}
 
+				// response = generateHttpResponse("./image.png");
 				ssize_t	bytes_send = write(fd, response.c_str(), response.size());
 				if (bytes_send < 0)
 				{

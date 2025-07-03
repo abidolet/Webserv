@@ -284,7 +284,17 @@ namespace Utils
 			Log(Log::DEBUG) << file[i] << Log::endl();
 		}
 	}
+	
+	std::string processPath(const std::string& old, bool isCgi)
+	{
+		if (old.empty())
+			return std::string();
+		if (old[0] != '/' && !isCgi)
+			throw std::runtime_error("path need to be absolute; `" + old + "'");
+	
+		std::string path = Utils::strtrim(old, "/");
+		return isCgi ? path : "/" + path;
+	}
 }
-
 
 
