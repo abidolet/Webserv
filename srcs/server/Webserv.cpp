@@ -339,6 +339,17 @@ const std::string	Webserv::handleGetRequest(HttpRequest& request, const Server& 
 		Log(Log::WARNING) << "File not found:'" << path << "'" << Log::endl();
 		return (getErrorPage(404, server));
 	}
+	if (S_ISDIR(statbuf.st_mode))
+	{
+		Log(Log::SUCCESS) << "trying to get to dir listing" << Log::endl();
+		if (request.location.directoryListing)
+		{
+			return (getDirectoryListing(request));
+		}
+
+		Log(Log::WARNING) << "directory listing is off:'" << path << "'" << Log::endl();
+		return (getErrorPage(403, server));
+	}
 
 	Log(Log::DEBUG) << "File found:" << path << Log::endl();
 
@@ -449,16 +460,11 @@ const std::string	Webserv::handleDeleteRequest(const std::string& path, const Se
 	Log() << "Delete request for: " << path << Log::endl();
 
 	std::string	tmp = path;
+	tmp = tmp.erase(tmp.find_last_of('/'));
 	while (!tmp.empty())
 	{
 		if (access(tmp.c_str(), W_OK) != 0)
 		{
-			struct stat	statbuf;
-			if (stat(path.c_str(), &statbuf) != 0)
-			{
-				Log(Log::WARNING) << "File not found:" << path << "'" << Log::endl();
-				return (getErrorPage(404, server));
-			}
 			Log(Log::ERROR) << "Cannot delete" << path << "missing permission for:" << tmp << Log::endl();
 			return (getErrorPage(403, server));
 		}
@@ -720,7 +726,6 @@ void	Webserv::run()
 
 				std::string	response = "";
 				CgiHandler	cgi(httpReq.method, httpReq.headers["Content-Type"], httpReq.headers["Content-Length"], *server);
-
 				Server::registerSession(addr.sin_addr.s_addr);
 
 				if (!httpReq.location.redirection.second.empty())
@@ -734,8 +739,11 @@ void	Webserv::run()
 				else if (cgi.cgiRequest(httpReq, server->locations))
 				{
 					if (!httpReq.headers["Content-Length"].empty())
+					{
 						cgi.sendFd(fd);
-					Log(Log::LOG) << "launching cgi" << Log::endl();
+					}
+
+					Log(Log::DEBUG) << "launching cgi" << Log::endl();
 					response = cgi.launch();
 				}
 				else if (httpReq.method == "GET")
@@ -756,9 +764,14 @@ void	Webserv::run()
 					response = getErrorPage(501, *server);
 				}
 
-				if (send(fd, response.c_str(), response.size(), 0) == -1)
+				ssize_t	bytes_send = write(fd, response.c_str(), response.size());
+				if (bytes_send < 0)
 				{
-					ERROR("send error:");
+					ERROR("write error:");
+				}
+				else if (bytes_send < static_cast<ssize_t>(response.size()))
+				{
+					Log(Log::WARNING) << "Function write did't return enough bytes:" << static_cast<ssize_t>(response.size()) - bytes_send << "bytes haven't been send" << Log::endl();
 				}
 
 				epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, NULL);
