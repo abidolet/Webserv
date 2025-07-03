@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ygille <ygille@student.42lyon.fr>          +#+  +:+       +#+        */
+/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: Invalid date        by                   #+#    #+#             */
-/*   Updated: 2025/06/27 12:41:43 by ygille           ###   ########.fr       */
+/*   Created: Invalid Date        by                   #+#    #+#             */
+/*   Updated: 2025/07/03 10:05:58 by mjuncker         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,7 +79,7 @@ std::string	CgiHandler::launch()
 	if (this->info[AS_BODY] && !this->fd)
 		Log(Log::ERROR) << "This request need body" << Log::endl();
 
-	Log(Log::LOG) << this->cgi << Log::endl();
+	Log(Log::DEBUG) << this->cgi << Log::endl();
 	this->pid = fork();
 
 	if (pid < 0)
@@ -187,7 +187,7 @@ std::string	CgiHandler::father()
 
 	while (!wait)
 	{
-		Log(Log::LOG) << "Waiting for CGI to complete clock: " << clock() << Log::endl();
+		Log(Log::DEBUG) << "Waiting for CGI to complete clock: " << clock() << Log::endl();
     	wait = waitpid(pid, &status, WNOHANG);
 		if (start + TIMEOUT_DELAY < clock() || this->info[ERROR])
 			break;
@@ -198,7 +198,7 @@ std::string	CgiHandler::father()
 		return getErrorPage(504, this->server);
 	}
 
-	Log(Log::LOG) << "CGI Executed" << Log::endl();
+	Log(Log::DEBUG) << "CGI Executed" << Log::endl();
 
 	if (WIFEXITED(status))
 	{
