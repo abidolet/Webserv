@@ -16,8 +16,6 @@ void assertLocation(const Location& location, const Block& block)
 		throw std::runtime_error("cannot have only one cgi directive; " + block.block_name);
 }
 
-
-
 Location::Location(Block &block)
 	:	path("/"), root("/"), index(""),
 		is_cgi(false), directoryListing(true), redirection(-1, "")
@@ -91,3 +89,34 @@ void Location::setupLocationRoot(const Block& block)
 		root = split[2];
 	}
 }
+
+const Location*	getLocation(const std::string& path, const Server& server)
+{
+	Log(Log::DEBUG) << "Checking location for:" << path << Log::endl();
+	const Location*	best_match = NULL;
+	size_t	best_match_length = 0;
+
+	for (size_t	i = 0; i < server.locations.size(); ++i)
+	{
+		const Location&	loc = server.locations[i];
+		Log(Log::DEBUG) << "Checking location " << i << ": " << loc.root << Log::endl();
+
+		if (path == loc.root
+			|| (path.compare(0, loc.root.length(), loc.root) == 0
+			&& (loc.root[loc.root.length() - 1] == '/'
+				|| path[loc.root.length()] == '/'
+				|| path[loc.root.length()] == '\0')))
+		{
+			Log(Log::DEBUG) << "Valid match found: " << loc.root << Log::endl();
+
+			if (loc.root.length() > best_match_length)
+			{
+				best_match = &loc;
+				best_match_length = loc.root.length();
+				Log(Log::DEBUG) << "New best match: " << best_match->root << Log::endl();
+			}
+		}
+	}
+	return best_match;
+}
+

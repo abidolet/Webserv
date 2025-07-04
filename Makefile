@@ -16,19 +16,24 @@ ifeq ($(MODE), action)
 	CXXFLAGS = -Wall -Wextra -MD $(INCLUDES) -D PRETTY_LOGGER -D DISABLE_LOGGER=1 -g3
 endif
 
-VPATH = srcs:srcs/parser:srcs/server:srcs/cgi
+VPATH = srcs:srcs/parser:srcs/server:srcs/cgi:srcs/server/requests
 
-SRCS =	main.cpp		\
-		Webserv.cpp		\
-		Parser.cpp		\
-		Log.cpp			\
-		ParserUtils.cpp	\
-		Block.cpp		\
-		CgiHandler.cpp	\
-		Server.cpp		\
-		Location.cpp	\
-		Session.cpp		\
-		Levenshtein.cpp	\
+SRCS =	main.cpp			\
+		Webserv.cpp			\
+		Parser.cpp			\
+		Log.cpp				\
+		ParserUtils.cpp		\
+		Block.cpp			\
+		CgiHandler.cpp		\
+		Server.cpp			\
+		Location.cpp		\
+		Session.cpp			\
+		Levenshtein.cpp		\
+		listing.cpp			\
+		GetRequest.cpp		\
+		PostRequest.cpp		\
+		DeleteRequest.cpp	\
+		pages.cpp			\
 
 
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))

@@ -295,6 +295,7 @@ namespace Utils
 		std::string path = Utils::strtrim(old, "/");
 		return isCgi ? path : "/" + path;
 	}
+
 }
 
 

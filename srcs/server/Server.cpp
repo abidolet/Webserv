@@ -69,7 +69,7 @@ std::string Server::getCookies() const
 	{
 		cookies_str += declaration;
 		cookies_str += cookies[i];
-		cookies_str += "\r\n";
+		cookies_str += "; path=/\r\n";
 	}
 	//TODO: need to add the session uid as a cookie
 	std::vector<Session> sessions = readSessions("./.sessions");
@@ -81,7 +81,7 @@ std::string Server::getCookies() const
 		ss << session->uid;
 		cookies_str += declaration;
 		cookies_str += "session_uid=" + ss.str();
-		cookies_str += "\r\n";
+		cookies_str += "; path=/\r\n";
 	}
 
 	return cookies_str;
