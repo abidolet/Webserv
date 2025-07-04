@@ -123,6 +123,36 @@ const std::string	getErrorPage(const int error_code, const Server& server)
 	return (generatePage(error_code, content, ".html"));
 }
 
+const Location*	getLocation(const std::string& path, const Server& server)
+{
+	Log(Log::DEBUG) << "Checking location for:" << path << Log::endl();
+	const Location*	best_match = NULL;
+	size_t	best_match_length = 0;
+
+	for (size_t	i = 0; i < server.locations.size(); ++i)
+	{
+		const Location&	loc = server.locations[i];
+		Log(Log::DEBUG) << "Checking location " << i << ": " << loc.root << Log::endl();
+
+		if (path == loc.root
+			|| (path.compare(0, loc.root.length(), loc.root) == 0
+			&& (loc.root[loc.root.length() - 1] == '/'
+				|| path[loc.root.length()] == '/'
+				|| path[loc.root.length()] == '\0')))
+		{
+			Log(Log::DEBUG) << "Valid match found: " << loc.root << Log::endl();
+
+			if (loc.root.length() > best_match_length)
+			{
+				best_match = &loc;
+				best_match_length = loc.root.length();
+				Log(Log::DEBUG) << "New best match: " << best_match->root << Log::endl();
+			}
+		}
+	}
+	return best_match;
+}
+
 const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Server& server) const
 {
 	std::istringstream	stream(rawRequest);
@@ -169,31 +199,8 @@ const HttpRequest Webserv::parseRequest(const std::string& rawRequest, const Ser
 	}
 
 	Log(Log::DEBUG) << "Checking location for:" << request.path << Log::endl();
-	const Location*	best_match = NULL;
-	size_t	best_match_length = 0;
+	const Location*	best_match = getLocation(request.path, server);
 	request.method_allowed = false;
-
-	for (size_t	i = 0; i < server.locations.size(); ++i)
-	{
-		const Location&	loc = server.locations[i];
-		Log(Log::DEBUG) << "Checking location " << i << ": " << loc.root << Log::endl();
-
-		if (request.path == loc.root
-			|| (request.path.compare(0, loc.root.length(), loc.root) == 0
-			&& (loc.root[loc.root.length() - 1] == '/'
-				|| request.path[loc.root.length()] == '/'
-				|| request.path[loc.root.length()] == '\0')))
-		{
-			Log(Log::DEBUG) << "Valid match found: " << loc.root << Log::endl();
-
-			if (loc.root.length() > best_match_length)
-			{
-				best_match = &loc;
-				best_match_length = loc.root.length();
-				Log(Log::DEBUG) << "New best match: " << best_match->root << Log::endl();
-			}
-		}
-	}
 
 	request.server = server;
 	if (best_match)
@@ -426,6 +433,26 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 	if (it->second == "client_credentials")
 	{
 		ss << server.lastUID;
+		return generatePage(200, ss.str(), ".html");
+	}
+	if (it->second == "dir_content")
+	{
+		std::map<std::string, std::string>::const_iterator uid = request.headers.find("location");
+		if (uid == request.headers.end())
+			return generatePage(404, "missing location header", ".html");
+
+		const Location* loc = getLocation(uid->second, server);
+		if (loc == NULL)
+			return getErrorPage(404, server);
+		std::vector<File> files = getFilesInDir(loc->path);
+
+		std::stringstream ss;
+
+		for (size_t i = 0; i < files.size(); i++)
+		{
+			ss << files[i].name << "\r\n";
+		}
+
 		return generatePage(200, ss.str(), ".html");
 	}
 	else if (it->second == "upload")
@@ -782,7 +809,6 @@ void	Webserv::run()
 					response = getErrorPage(501, *server);
 				}
 
-				// response = generateHttpResponse("./image.png");
 				ssize_t	bytes_send = write(fd, response.c_str(), response.size());
 				if (bytes_send < 0)
 				{
