@@ -4,7 +4,7 @@
 Session::Session()
 	: uid(0), visitCount(1) { }
 
-Session::Session(uint _uid)
+Session::Session(unsigned int _uid)
 {
 	uid = _uid;
 	visitCount = 1;

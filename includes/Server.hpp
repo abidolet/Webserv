@@ -33,7 +33,7 @@ struct	Server
 	std::string	getCookiesCgi() const;
 
 	Location*	searchLocationByName(const std::string &name);
-	static void	registerSession(const uint uid);
+	static void	registerSession(const unsigned int uid);
 
 	std::string					root;
 	std::vector<std::string>	server_names;
@@ -48,7 +48,7 @@ struct	Server
 	bool						is_default;
 
 	std::vector<std::string>	cookies;
-	uint						lastUID;
+	unsigned int						lastUID;
 
 private:
 	void	setupMaxBodySize(Block& block);

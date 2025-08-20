@@ -1,7 +1,7 @@
 <?php
 // Output CGI-compliant headers
 echo "Content-Type: text/html\n\n";
-
+sleep(1);
 // HTML output
 echo "<!DOCTYPE html>\n";
 echo "<html>\n";

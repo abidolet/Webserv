@@ -7,7 +7,7 @@ struct Session
 	size_t	visitCount;
 
 	Session();
-	Session(uint _uid);
+	Session(unsigned int _uid);
 
 	std::string			sessionToString();
 	static Session		stringToSession(std::string &str);

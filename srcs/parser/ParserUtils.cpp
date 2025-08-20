@@ -93,7 +93,7 @@ namespace Utils
 	std::string findClosest(std::string str, std::vector<std::string> options)
 	{
 		int		idx = 0;
-		uint	min = -1;
+		unsigned int	min = -1;
 
 		std::vector<std::string> lowers;
 
@@ -102,7 +102,7 @@ namespace Utils
 
 		for (size_t i = 0; i < options.size(); i++)
 		{
-			uint distance = LevenshteinDistance(str, lowers[i]);
+			unsigned int distance = LevenshteinDistance(str, lowers[i]);
 			if (distance < min)
 			{
 				min = distance;

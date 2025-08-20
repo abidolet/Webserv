@@ -192,7 +192,7 @@ std::vector<Session> readSessions(const std::string& sessionFilepath)
 	return sessions;
 }
 
-void Server::registerSession(const uint uid)
+void Server::registerSession(const unsigned int uid)
 {
 	const std::string	sessionFilepath = "./.sessions";
 	std::ofstream		stream;
