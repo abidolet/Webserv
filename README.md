@@ -29,7 +29,7 @@ this is the request you can do:
 |curl -X DELETE `<ip>/<loc>/foo`| delete the file foo (`DELETE` methode need to be enable in the location) |
 |curl -X GET `<ip>/<loc>/foo`| get the content of foo |
 |curl -X POST -H "request_type:client_credentials" `<ip>` | get the `<UID>` associated to your ip |
-|curl -X POST -H "request_type:client_visits" -H "UID:`<UID>`" `<ip>`|return the number of request of <UID>|
+|curl -X POST -H "request_type:client_visits" -H "UID:`<UID>`" `<ip>`|return the number of request of `<UID>`|
 
 
 > webserv will store the id of an ip and the number of request it made into a session file
