@@ -141,3 +141,10 @@ to launch don't forget your config file
 ``` bash
 ./webserv <path-to-conf>
 ```
+## Contributors
+[@abidolet](https://github.com/Alexis42lyon)
+
+[@ygille](https://github.com/Bluesmoothie)
+
+[@mjuncker](https://github.com/Maxime-juncker)
+
