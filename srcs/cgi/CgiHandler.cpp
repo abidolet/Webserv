@@ -165,6 +165,7 @@ void	CgiHandler::childProcess()
 
 std::string	CgiHandler::father()
 {
+	Log(Log::LOG) << "Father reached " << clock() << Log::endl();
 	int 				status = 0;
 	int					wait = 0;
     char 				buffer[1024];
@@ -175,6 +176,25 @@ std::string	CgiHandler::father()
 	CLOSE(pipes.to_cgi[OUTPUT]);
     CLOSE(pipes.from_cgi[INPUT]);
 
+	while (!wait)
+	{
+		Log(Log::DEBUG) << "Waiting for CGI to complete clock: " << clock() << Log::endl();
+    	wait = waitpid(pid, &status, WNOHANG);
+		if (start + TIMEOUT_DELAY < clock() || this->info[ERROR])
+		{
+			Log(Log::LOG) << "CGI Timed out" << clock() << Log::endl();
+			break;
+		}
+	}
+	if (wait <= 0)
+	{
+		kill(pid, SIGTERM);
+		return getErrorPage(504, this->server);
+	}
+
+	int flags = fcntl(pipes.from_cgi[0], F_GETFL, 0);
+    fcntl(pipes.from_cgi[0], F_SETFL, flags | O_NONBLOCK);
+
 	if (!this->info[ERROR]) while ((bytes_read = read(pipes.from_cgi[0], buffer, sizeof(buffer) - 1)) > 0)
 	{
         buffer[bytes_read] = '\0';
@@ -184,19 +204,6 @@ std::string	CgiHandler::father()
     CLOSE(pipes.to_cgi[INPUT]);
 
 	this->info[EXECUTED] = true;
-
-	while (!wait)
-	{
-		Log(Log::DEBUG) << "Waiting for CGI to complete clock: " << clock() << Log::endl();
-    	wait = waitpid(pid, &status, WNOHANG);
-		if (start + TIMEOUT_DELAY < clock() || this->info[ERROR])
-			break;
-	}
-	if (wait <= 0)
-	{
-		kill(pid, SIGTERM);
-		return getErrorPage(504, this->server);
-	}
 
 	Log(Log::DEBUG) << "CGI Executed" << Log::endl();
 
