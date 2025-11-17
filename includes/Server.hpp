@@ -1,3 +1,6 @@
+#ifndef SERVER_HPP
+#define SERVER_HPP
+
 #include <string>
 #include <vector>
 #include <map>
@@ -56,3 +59,5 @@ private:
 	void	setupListen(Block &block);
 
 };
+
+#endif

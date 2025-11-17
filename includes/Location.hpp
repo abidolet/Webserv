@@ -1,3 +1,6 @@
+#ifndef LOCATION_HPP
+#define LOCATION_HPP
+
 #include <string>
 #include <vector>
 
@@ -34,3 +37,5 @@ private:
 
 };
 const Location*	getLocation(const std::string& path, const Server& server);
+
+#endif

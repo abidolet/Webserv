@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiHandler.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mjuncker <mjuncker@student.42lyon.fr>      +#+  +:+       +#+        */
+/*   By: abidolet <abidolet@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: Invalid Date        by                   #+#    #+#             */
-/*   Updated: 2025/07/04 14:59:46 by mjuncker         ###   ########.fr       */
+/*   Created: Invalid date        by                   #+#    #+#             */
+/*   Updated: 2025/11/17 13:03:19 by abidolet         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,12 +38,12 @@ void		CgiHandler::addBody()
 {
 	char				buffer[4096];
 	ssize_t				bytes_read;
-	const clock_t		start = clock();
+	const clock_t		start = std::clock();
 
 	if (this->toReceive) do
 	{
 		bytes_read = recv(this->fd, buffer, sizeof(buffer), 0);
-		if (start + TIMEOUT_DELAY < clock())
+		if (start + TIMEOUT_DELAY < std::clock())
 			break;
 		if (bytes_read == -1)
 			continue;
@@ -165,24 +165,24 @@ void	CgiHandler::childProcess()
 
 std::string	CgiHandler::father()
 {
-	Log(Log::LOG) << "Father reached " << clock() << Log::endl();
+	Log(Log::LOG) << "Father reached " << std::clock() << Log::endl();
 	int 				status = 0;
 	int					wait = 0;
     char 				buffer[1024];
 	ssize_t 			bytes_read;
     std::string 		cgi_output = HTTP_OK;
-	const clock_t		start = clock();
+	const clock_t		start = std::clock();
 
 	CLOSE(pipes.to_cgi[OUTPUT]);
     CLOSE(pipes.from_cgi[INPUT]);
 
 	while (!wait)
 	{
-		Log(Log::DEBUG) << "Waiting for CGI to complete clock: " << clock() << Log::endl();
+		Log(Log::DEBUG) << "Waiting for CGI to complete clock: " << std::clock() << Log::endl();
     	wait = waitpid(pid, &status, WNOHANG);
-		if (start + TIMEOUT_DELAY < clock() || this->info[ERROR])
+		if (start + TIMEOUT_DELAY < std::clock() || this->info[ERROR])
 		{
-			Log(Log::LOG) << "CGI Timed out" << clock() << Log::endl();
+			Log(Log::LOG) << "CGI Timed out" << std::clock() << Log::endl();
 			break;
 		}
 	}

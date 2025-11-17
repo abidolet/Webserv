@@ -4,6 +4,7 @@
 #include <ctime>
 #include <fstream>
 
+std::string getContentType(const std::string& filename);
 std::string getDirContent(const HttpRequest& request);
 std::string getClientVisits(const HttpRequest& request);
 std::string upload(const HttpRequest& request);
@@ -44,7 +45,7 @@ const std::string	Webserv::handlePostRequest(const HttpRequest& request, const S
 		return upload(request);
 	}
 
-	return (generatePage(200, request.body, ".html"));
+	return (generatePage(200, request.body, getContentType(request.path)));
 }
 
 //
@@ -74,13 +75,13 @@ std::string getClientVisits(const HttpRequest& request)
 	std::map<std::string, std::string>::const_iterator uid = request.headers.find("UID");
 	
 	if (uid == request.headers.end())
-		return generatePage(404, "missing UID header", ".html");
+		return getErrorPage(404, request.server);
 	
 	std::vector<Session> sessions = readSessions("./.sessions");
 	Session* session = Session::find(sessions, std::atoi(uid->second.c_str()));
 
 	if (session == NULL)
-		return generatePage(404, "ressource not found", ".html");
+		return getErrorPage(404, request.server);
 	
 	ss << session->visitCount;
 	return generatePage(200, ss.str(), ".html");
@@ -116,11 +117,11 @@ std::string upload(const HttpRequest& request)
 	std::ofstream	outfile(filepath.c_str(), std::ios::binary);
 	if (!outfile)
 	{
-		return (generatePage(500, "Failed to create file: " + filepath, ".html"));
+		return (getErrorPage(500, request.server));
 	}
 
 	outfile.write(request.body.data(), request.body.size());
 	outfile.close();
 
-	return (generatePage(201, "File saved as " + filename, ".html"));
+	return (generatePage(201, "File saved as " + filename, getContentType(filename)));
 }
